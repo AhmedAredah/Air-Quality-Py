@@ -1,0 +1,39 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+.dist/
+build/
+.temp/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Distribution / packaging
+pip-wheel-metadata/
+
+# Logs & local env
+*.log
+.env*
+
+# IDE/editor
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test / coverage
+.coverage*
+htmlcov/
+.pytest_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Parquet / Arrow temp (if any)
+*.parquet.tmp
