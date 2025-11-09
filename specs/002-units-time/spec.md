@@ -28,6 +28,12 @@ This feature is designed under the air_quality Constitution v1.0.0. Key enforced
 
 Provide a minimal, deterministic, Enum-based foundation for handling measurement units (concentration) and core time operations (bounds, resampling, rolling statistics) across air quality datasets. Must reinforce constitution principles: columnar-first, DRY, provenance-friendly, no free-form strings for controlled vocabularies.
 
+## Clarifications
+
+### Session 2025-11-08
+
+- Q: What rounding policy granularity should we adopt? → A: Per-unit defaults with optional per-pollutant overrides (centralized registry).
+
 ## 2. Goals
 
 - G1: Enforce controlled vocabulary for supported units using an Enum (no raw strings in public APIs).
@@ -83,9 +89,10 @@ Constitution references: Sections 9 (API & errors), 11 (performance), 15 (units 
 - FR-U03: Implement `can_convert(src: Unit, dst: Unit) -> bool` supporting identity and defined factors.
 - FR-U04: Implement `get_factor(src: Unit, dst: Unit) -> float` raising `UnitError` if unsupported.
 - FR-U05: Implement `convert_values(values, src, dst)` accepting scalar (int|float) or vector (pandas Series, Polars Series) and returning same container type, using vectorized multiplication only.
-- FR-U06: Implement `round_for_reporting(values, unit)` applying precision rules (UG_M3/PPB: 1 decimal; MG_M3/PPM: 3 decimals).
+- FR-U06: Implement `round_for_reporting(values, unit, pollutant: Optional[str] = None)` applying a centralized rounding policy: per-unit defaults with optional per-pollutant overrides. Defaults: UG_M3/PPB → 1 decimal; MG_M3/PPM → 3 decimals. When an override exists for `pollutant`, it takes precedence over unit default.
 - FR-U07: Implement `validate_units_schema(mapping: dict[str, Unit | str]) -> dict[str, Unit]` returning normalized mapping or raising `UnitError` with column name context.
 - FR-U08: All public unit API functions must be type annotated with no implicit Any.
+- FR-U09: Provide a centralized rounding policy registry (read-only at runtime) that defines per-unit defaults and optional per-pollutant overrides; documented and testable.
 
 ### Time Utilities
 
@@ -148,6 +155,7 @@ Constitution references: Sections 8 (reporting), 15 (provenance/units).
 - EC5: Rolling window with window=1 returns original numeric values.
 - EC6: Resample on DataFrame lacking datetime dtype coerces to UTC via `pd.to_datetime`.
 - EC7: Invalid unit key in `column_units` metadata raises `UnitError` with column name.
+- EC8: If a pollutant-specific rounding override is defined, it supersedes the unit default.
 
 ## 9. Acceptance Criteria
 
@@ -157,6 +165,7 @@ Constitution references: Sections 8 (reporting), 15 (provenance/units).
 - AC4: Existing 73 tests remain green (no regressions).
 - AC5: README gains short usage section (<= 20 lines) demonstrating unit conversion + time bounds.
 - AC6: Performance smoke test (optional) demonstrates conversion speed target qualitatively.
+- AC7: Rounding policy registry covered by tests showing per-unit default and pollutant override precedence.
 
 Constitution Check Gate: Implementation MAY NOT proceed until this spec passes a Constitution Check confirming adherence to Sections 3, 7, 8, 9, 10, 11, and 15.
 
