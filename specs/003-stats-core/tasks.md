@@ -32,17 +32,17 @@ Purpose: Ensure baseline environment & tooling (some already exist; tasks verify
 
 Purpose: Shared logic & utilities required across all stories.
 
-- [ ] T008 Implement shared flag filtering helper in `src/air_quality/stats_analysis/core/common.py` (exclude invalid/outlier, mark below_dl missing)
-- [ ] T009 [P] Implement numeric column validation helper in `src/air_quality/stats_analysis/core/validation.py`
-- [ ] T010 [P] Implement helper to compute quantiles list (5,25,75,95) in `src/air_quality/stats_analysis/core/descriptive.py` (placeholder returning list)
-- [ ] T011 Implement provenance attachment helper wrapper for stats in `src/air_quality/stats_analysis/core/provenance_helpers.py`
-- [ ] T012 [P] Add config dataclasses for each module in `src/air_quality/modules/configs.py`
-- [ ] T013 Integrate time bounds retrieval via `time_utils.compute_time_bounds` into provenance helper
-- [ ] T014 Add constants (allowed_time_units, default_min_samples, default_min_duration_years) in `src/air_quality/stats_analysis/core/constants.py`
-- [ ] T015 [P] Add unit presence checking utility for trends & correlation in `src/air_quality/stats_analysis/core/units_check.py`
-- [ ] T016 Add error mapping docstrings referencing Constitution sections in each new helper
-- [ ] T017 Create initial perf synthetic dataset factory in `tests/perf_smoke/factories.py`
-- [ ] T018 [P] Add test utilities for random reproducible dataset generation in `tests/unit/stats_core/utils.py`
+- [X] T008 Implement shared flag filtering helper in `src/air_quality/stats_analysis/core/common.py` (exclude invalid/outlier, mark below_dl missing)
+- [X] T009 [P] Implement numeric column validation helper in `src/air_quality/stats_analysis/core/validation.py`
+- [X] T010 [P] Implement helper to compute quantiles list (5,25,75,95) in `src/air_quality/stats_analysis/core/descriptive.py` (placeholder returning list)
+- [X] T011 Implement provenance attachment helper wrapper for stats in `src/air_quality/stats_analysis/core/provenance_helpers.py`
+- [X] T012 [P] Add config dataclasses for each module in `src/air_quality/modules/configs.py`
+- [X] T013 Integrate time bounds retrieval via `time_utils.compute_time_bounds` into provenance helper
+- [X] T014 Add constants (allowed_time_units, default_min_samples, default_min_duration_years) in `src/air_quality/stats_analysis/core/constants.py`
+- [X] T015 [P] Add unit presence checking utility for trends & correlation in `src/air_quality/stats_analysis/core/units_check.py`
+- [X] T016 Add error mapping docstrings referencing Constitution sections in each new helper
+- [X] T017 Create initial perf synthetic dataset factory in `tests/perf_smoke/factories.py`
+- [X] T018 [P] Add test utilities for random reproducible dataset generation in `tests/unit/stats_core/utils.py`
 
 Checkpoint: All foundational helpers & configs in place.
 
