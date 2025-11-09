@@ -10,7 +10,10 @@ Constitution compliance:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal, Optional
+from typing import Optional
+
+from ..units import TimeUnit
+from .core.constants import CorrelationMethod
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,8 +58,8 @@ class CorrelationConfig:
     ----------
     group_by : list[str] | None
         Grouping columns (None for global aggregation).
-    method : {'pearson', 'spearman'}, default='pearson'
-        Correlation method.
+    method : CorrelationMethod, default=CorrelationMethod.PEARSON
+        Correlation method (PEARSON or SPEARMAN).
     min_samples : int, default=3
         Minimum number of valid pairwise observations.
     allow_missing_units : bool, default=False
@@ -71,8 +74,8 @@ class CorrelationConfig:
         QC flag column name.
     """
 
+    method: CorrelationMethod = CorrelationMethod.PEARSON
     group_by: Optional[list[str]] = None
-    method: Literal["pearson", "spearman"] = "pearson"
     min_samples: int = 3
     allow_missing_units: bool = False
     pollutant_col: str = "pollutant"
@@ -91,10 +94,11 @@ class TrendConfig:
 
     Attributes
     ----------
+    time_unit : TimeUnit
+        Time unit for slope computation (calendar-aware semantics).
+        One of: TimeUnit.HOUR, TimeUnit.DAY, TimeUnit.CALENDAR_MONTH, TimeUnit.CALENDAR_YEAR.
     group_by : list[str] | None
         Grouping columns (None for global aggregation).
-    time_unit : {'hour', 'day', 'calendar_month', 'calendar_year'}
-        Time unit for slope computation (calendar-aware semantics).
     min_samples : int, default=3
         Minimum number of valid observations for trend.
     min_duration_years : float, default=1.0
@@ -109,7 +113,7 @@ class TrendConfig:
         Datetime column name for time index.
     """
 
-    time_unit: Literal["hour", "day", "calendar_month", "calendar_year"]
+    time_unit: TimeUnit
     group_by: Optional[list[str]] = None
     min_samples: int = 3
     min_duration_years: float = 1.0

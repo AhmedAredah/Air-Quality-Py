@@ -25,6 +25,50 @@ import polars as pl
 from .exceptions import UnitError
 
 
+class TimeUnit(str, Enum):
+    """Time units for trend analysis with calendar-aware semantics.
+
+    Constitution References
+    -----------------------
+    - Section 3: Time unit standards for temporal analysis
+    - Section 15: Centralized time unit definitions
+
+    Time Unit Semantics
+    -------------------
+    These units follow calendar-aware semantics for trend analysis:
+
+    HOUR : str
+        1 hour elapsed time (3600 seconds).
+        Use for high-frequency data (hourly observations).
+
+    DAY : str
+        1 calendar day (24 hours).
+        Use for daily aggregations and short-term trends.
+
+    CALENDAR_MONTH : str
+        1 calendar month (variable days: 28-31).
+        Accounts for month-length variation.
+        Use for monthly trends and seasonal analysis.
+
+    CALENDAR_YEAR : str
+        1 calendar year (365 or 366 days).
+        Accounts for leap years.
+        Use for annual trends and long-term analysis.
+
+    Examples
+    --------
+    >>> TimeUnit.DAY.value
+    'day'
+    >>> TimeUnit.CALENDAR_YEAR.value
+    'calendar_year'
+    """
+
+    HOUR = "hour"
+    DAY = "day"
+    CALENDAR_MONTH = "calendar_month"
+    CALENDAR_YEAR = "calendar_year"
+
+
 class UnitFamily(Enum):
     """Unit family classification for preventing invalid conversions.
 
@@ -434,6 +478,7 @@ def validate_units_schema(mapping: Dict[str, Union[Unit, str]]) -> Dict[str, Uni
 
 
 __all__ = [
+    "TimeUnit",
     "Unit",
     "UnitFamily",
     "can_convert",

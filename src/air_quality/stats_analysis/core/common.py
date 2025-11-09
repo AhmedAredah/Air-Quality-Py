@@ -14,18 +14,19 @@ from typing import Optional
 import polars as pl
 
 from ....exceptions import SchemaError
+from ....qc_flags import EXCLUDE_FLAGS, MISSING_FLAGS, QCFlag
 
 
 def filter_by_qc_flags(
     data: pl.LazyFrame,
     flag_col: str = "flag",
-    exclude_flags: Optional[set[str]] = None,
-    treat_as_missing: Optional[set[str]] = None,
+    exclude_flags: Optional[frozenset[QCFlag]] = None,
+    treat_as_missing: Optional[frozenset[QCFlag]] = None,
 ) -> pl.LazyFrame:
     """Filter dataset by QC flags according to Constitution Sec. 3 semantics.
 
-    Excludes rows with flags in `exclude_flags` (default: {'invalid', 'outlier'}).
-    Marks rows with flags in `treat_as_missing` (default: {'below_dl'}) as missing
+    Excludes rows with flags in `exclude_flags` (default: EXCLUDE_FLAGS from constants).
+    Marks rows with flags in `treat_as_missing` (default: MISSING_FLAGS from constants) as missing
     by setting concentration column to null (handled by caller).
 
     Constitution References
@@ -39,10 +40,10 @@ def filter_by_qc_flags(
         Input dataset (canonical long schema expected).
     flag_col : str, default='flag'
         Name of the QC flag column.
-    exclude_flags : set[str], optional
-        Flags to exclude entirely (default: {'invalid', 'outlier'}).
-    treat_as_missing : set[str], optional
-        Flags to treat as missing (default: {'below_dl'}).
+    exclude_flags : frozenset[QCFlag], optional
+        Flags to exclude entirely (default: {QCFlag.INVALID, QCFlag.OUTLIER}).
+    treat_as_missing : frozenset[QCFlag], optional
+        Flags to treat as missing (default: {QCFlag.BELOW_DL}).
         Note: This function does NOT modify concentration values;
         caller should handle missing value logic separately.
 
@@ -61,6 +62,7 @@ def filter_by_qc_flags(
     Examples
     --------
     >>> import polars as pl
+    >>> from .constants import QCFlag
     >>> data = pl.LazyFrame({
     ...     'datetime': ['2024-01-01', '2024-01-02', '2024-01-03'],
     ...     'site_id': ['A', 'A', 'A'],
@@ -73,9 +75,9 @@ def filter_by_qc_flags(
     ['valid', 'below_dl']
     """
     if exclude_flags is None:
-        exclude_flags = {"invalid", "outlier"}
+        exclude_flags = EXCLUDE_FLAGS
     if treat_as_missing is None:
-        treat_as_missing = {"below_dl"}
+        treat_as_missing = MISSING_FLAGS
 
     # Check schema
     if flag_col not in data.collect_schema().names():
@@ -87,7 +89,9 @@ def filter_by_qc_flags(
 
     # Exclude rows with flags in exclude_flags (vectorized filter)
     if exclude_flags:
-        data = data.filter(~pl.col(flag_col).is_in(list(exclude_flags)))
+        # Convert enum values to strings for Polars comparison
+        exclude_values = [flag.value for flag in exclude_flags]
+        data = data.filter(~pl.col(flag_col).is_in(exclude_values))
 
     # Note: treat_as_missing logic handled by caller (mark conc as null)
     # This function only filters exclusions; missing value handling is context-dependent
@@ -98,7 +102,7 @@ def mark_missing_by_flags(
     data: pl.LazyFrame,
     conc_col: str = "conc",
     flag_col: str = "flag",
-    missing_flags: Optional[set[str]] = None,
+    missing_flags: Optional[frozenset[QCFlag]] = None,
 ) -> pl.LazyFrame:
     """Mark concentration values as null for rows with specified flags.
 
@@ -117,8 +121,8 @@ def mark_missing_by_flags(
         Concentration column name.
     flag_col : str, default='flag'
         QC flag column name.
-    missing_flags : set[str], optional
-        Flags to mark as missing (default: {'below_dl'}).
+    missing_flags : frozenset[QCFlag], optional
+        Flags to mark as missing (default: {QCFlag.BELOW_DL}).
 
     Returns
     -------
@@ -133,6 +137,7 @@ def mark_missing_by_flags(
     Examples
     --------
     >>> import polars as pl
+    >>> from .constants import QCFlag
     >>> data = pl.LazyFrame({
     ...     'conc': [10.0, 5.0, 15.0],
     ...     'flag': ['valid', 'below_dl', 'valid']
@@ -142,7 +147,7 @@ def mark_missing_by_flags(
     [10.0, None, 15.0]
     """
     if missing_flags is None:
-        missing_flags = {"below_dl"}
+        missing_flags = MISSING_FLAGS
 
     schema_names = data.collect_schema().names()
     if conc_col not in schema_names:
@@ -160,8 +165,10 @@ def mark_missing_by_flags(
 
     # Mark as null where flag in missing_flags (vectorized when/otherwise)
     if missing_flags:
+        # Convert enum values to strings for Polars comparison
+        missing_values = [flag.value for flag in missing_flags]
         data = data.with_columns(
-            pl.when(pl.col(flag_col).is_in(list(missing_flags)))
+            pl.when(pl.col(flag_col).is_in(missing_values))
             .then(None)
             .otherwise(pl.col(conc_col))
             .alias(conc_col)
