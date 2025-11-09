@@ -23,7 +23,7 @@ import logging
 from typing import Any, Dict
 
 
-_DEFAULT_FORMAT = "% (asctime)s %(levelname)s %(name)s - %(message)s | ctx=%(context)s"
+_DEFAULT_FORMAT = "%(asctime)s %(levelname)s %(name)s - %(message)s | ctx=%(context)s"
 
 
 class _ContextAdapter(logging.LoggerAdapter):
@@ -71,7 +71,7 @@ def get_logger(name: str, **context: Any) -> logging.LoggerAdapter:
         handler.setLevel(logging.INFO)
         # Consistent formatter with ISO time
         formatter = logging.Formatter(
-            fmt="%(asctime)s %(levelname)s %(name)s - %(message)s | ctx=%(context)s",
+            fmt=_DEFAULT_FORMAT,
             datefmt="%Y-%m-%dT%H:%M:%S%z",
         )
         handler.setFormatter(formatter)

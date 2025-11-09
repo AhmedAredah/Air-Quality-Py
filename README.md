@@ -100,6 +100,75 @@ print(module.provenance.provenance_hash)
 # Output: sha256:abc123... (deterministic hash)
 ```
 
+### Units & Time Utilities (Feature 002)
+
+**Status**: ✅ Complete (205 tests passing)
+
+Foundation for unit conversion, rounding policies, and time utilities:
+
+```python
+import pandas as pd
+import polars as pl
+from air_quality import (
+    Unit,
+    convert_values,
+    round_for_reporting,
+    validate_units_schema,
+    TimeBounds,
+    compute_time_bounds,
+    resample_mean,
+    rolling_window_mean,
+)
+
+# Unit conversion (vectorized operations, preserves container type)
+Unit.parse("ug/m3")  # → Unit.UG_M3
+
+# Convert pandas Series
+values = pd.Series([10.0, 20.0, 30.0])
+converted = convert_values(values, Unit.UG_M3, Unit.MG_M3)
+# Result: [0.010, 0.020, 0.030] (ug/m3 → mg/m3)
+
+# Centralized rounding for reporting (per-unit defaults + pollutant overrides)
+rounded = round_for_reporting(converted, Unit.MG_M3)
+# Result: [0.010, 0.020, 0.030] (3 decimal places for mg/m3)
+
+# Validate and normalize unit metadata
+schema = validate_units_schema({
+    "conc": "ug/m3",      # String gets normalized
+    "unc": Unit.UG_M3     # Enum passes through
+})
+# Result: {"conc": Unit.UG_M3, "unc": Unit.UG_M3}
+
+# Time bounds (Polars LazyFrame → UTC-aware, sub-second precision)
+lf = pl.LazyFrame({
+    "datetime": [
+        "2025-01-01T00:00:00.123456",
+        "2025-01-01T01:00:00.789012"
+    ]
+}).with_columns(pl.col("datetime").str.strptime(pl.Datetime))
+
+bounds = compute_time_bounds(lf, time_col="datetime")
+# Result: TimeBounds(start=datetime(..., tzinfo=UTC), end=datetime(..., tzinfo=UTC))
+# Single aggregation operation (Constitution Sec 11 compliant)
+
+# Resampling (pandas boundary operation, returns new DataFrame)
+df = pd.DataFrame({
+    "datetime": pd.date_range("2025-01-01", periods=10, freq="30min"),
+    "conc": range(10),
+    "site_id": ["A"] * 10
+})
+hourly = resample_mean(df, rule="1H", time_col="datetime")
+# Result: New DataFrame with hourly averages; original df unchanged
+
+# Rolling mean QC helper (centered window, min_periods=1)
+smoothed = rolling_window_mean(df, window=3, time_col="datetime")
+# Result: New DataFrame with rolling mean applied to numeric columns
+```
+
+**Performance**: Validated to handle 1M row conversions in <2ms (25x better than 50ms target). No Python row loops in any function (vectorized operations only).
+
+**Quickstart**: See [specs/002-units-time/quickstart.md](specs/002-units-time/quickstart.md) for detailed examples.
+
 ---
 
 ## Architecture
@@ -180,7 +249,7 @@ Validated with **1M row benchmarks** (see `tests/test_mapping_perf.py`):
 uv run -q pytest -q
 ```
 
-**Current Status**: 73 tests passing (exceptions, logging, provenance, mapping, dataset, module lifecycle, performance)
+**Current Status**: 205 tests passing (exceptions, logging, provenance, mapping, dataset, module lifecycle, units, time utilities, performance)
 
 ### Type Checking
 
@@ -209,7 +278,7 @@ Current version: **0.1.0** (initial foundational core release)
 ### Project Structure
 
 - `src/air_quality/`: Source code
-- `tests/`: Test suite (73 tests covering exceptions, logging, provenance, mapping, dataset, module lifecycle, performance)
+- `tests/`: Test suite (205 tests covering exceptions, logging, provenance, mapping, dataset, module lifecycle, units, time utilities, performance)
 - `specs/001-core-foundation/`: Specification documents (tasks.md, quickstart.md)
 
 ---

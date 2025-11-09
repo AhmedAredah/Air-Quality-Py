@@ -10,13 +10,14 @@ Constitution compliance:
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 import pandas as pd
 import polars as pl
 import pyarrow as pa
 
 from ..exceptions import SchemaError
+from ..units import Unit, validate_units_schema
 from .base import BaseDataset
 
 
@@ -69,6 +70,7 @@ class TimeSeriesDataset(BaseDataset):
         metadata: Optional[Dict[str, Any]] = None,
         mapping: Optional[Dict[str, str]] = None,
         time_index_name: str = "datetime",
+        column_units: Optional[Dict[str, Union[Unit, str]]] = None,
     ):
         """Initialize time series dataset.
 
@@ -82,11 +84,17 @@ class TimeSeriesDataset(BaseDataset):
             Canonical to original column mapping.
         time_index_name : str, default='datetime'
             Name of the time index column.
+        column_units : dict[str, Unit | str], optional
+            Column name to unit mapping. String values will be normalized
+            to Unit enum members via validate_units_schema().
 
         Raises
         ------
         SchemaError
             If time index column is missing from schema.
+        UnitError
+            If column_units contains invalid unit strings; error includes
+            offending column name.
         DataValidationError
             If dataset is empty (via parent class).
         """
@@ -98,6 +106,17 @@ class TimeSeriesDataset(BaseDataset):
                 f"Available columns: {list(schema.names())}"
             )
 
+        # Initialize metadata if not provided
+        if metadata is None:
+            metadata = {}
+
+        # Validate and normalize column_units if provided (Constitution Sec 3)
+        if column_units is not None:
+            # Use validate_units_schema for normalization and validation
+            # Raises UnitError with column name context if invalid
+            normalized_units = validate_units_schema(column_units)
+            metadata["column_units"] = normalized_units
+
         super().__init__(data=data, metadata=metadata, mapping=mapping)
         self._time_index_name = time_index_name
 
@@ -106,6 +125,38 @@ class TimeSeriesDataset(BaseDataset):
         """Name of the time index column."""
         return self._time_index_name
 
+    @property
+    def column_units(self) -> Optional[Dict[str, Unit]]:
+        """Column-to-unit mapping if provided at construction.
+
+        Returns None if no unit metadata was specified.
+
+        Constitution Section 3: Unit metadata exposure for provenance.
+        Constitution Section 15: Centralized unit validation.
+
+        Returns
+        -------
+        dict[str, Unit] | None
+            Normalized column units mapping, or None if not provided.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from air_quality.units import Unit
+        >>> df = pd.DataFrame({
+        ...     'datetime': pd.date_range('2024-01-01', periods=3, freq='h'),
+        ...     'site_id': ['A'] * 3,
+        ...     'pollutant': ['PM2.5'] * 3,
+        ...     'conc': [10.0, 12.0, 14.0]
+        ... })
+        >>> dataset = TimeSeriesDataset.from_dataframe(
+        ...     df, column_units={'conc': 'ug/m3'}
+        ... )
+        >>> dataset.column_units
+        {'conc': <Unit.UG_M3: 'ug/m3'>}
+        """
+        return self.metadata.get("column_units")
+
     @classmethod
     def from_dataframe(
         cls,
@@ -113,6 +164,7 @@ class TimeSeriesDataset(BaseDataset):
         metadata: Optional[Dict[str, Any]] = None,
         mapping: Optional[Dict[str, str]] = None,
         time_index_name: str = "datetime",
+        column_units: Optional[Dict[str, Union[Unit, str]]] = None,
     ) -> TimeSeriesDataset:
         """Construct time series dataset from pandas DataFrame.
 
@@ -126,6 +178,9 @@ class TimeSeriesDataset(BaseDataset):
             Canonical to original column mapping.
         time_index_name : str, default='datetime'
             Name of the time index column.
+        column_units : dict[str, Unit | str], optional
+            Column name to unit mapping. String values will be normalized
+            to Unit enum members.
 
         Returns
         -------
@@ -136,6 +191,8 @@ class TimeSeriesDataset(BaseDataset):
         ------
         SchemaError
             If time index column is missing.
+        UnitError
+            If column_units contains invalid unit strings.
         DataValidationError
             If dataset is empty.
         """
@@ -147,6 +204,7 @@ class TimeSeriesDataset(BaseDataset):
             metadata=metadata,
             mapping=mapping,
             time_index_name=time_index_name,
+            column_units=column_units,
         )
 
     @classmethod
@@ -156,6 +214,7 @@ class TimeSeriesDataset(BaseDataset):
         metadata: Optional[Dict[str, Any]] = None,
         mapping: Optional[Dict[str, str]] = None,
         time_index_name: str = "datetime",
+        column_units: Optional[Dict[str, Union[Unit, str]]] = None,
     ) -> TimeSeriesDataset:
         """Construct time series dataset from PyArrow Table.
 
@@ -169,6 +228,9 @@ class TimeSeriesDataset(BaseDataset):
             Canonical to original column mapping.
         time_index_name : str, default='datetime'
             Name of the time index column.
+        column_units : dict[str, Unit | str], optional
+            Column name to unit mapping. String values will be normalized
+            to Unit enum members.
 
         Returns
         -------
@@ -179,6 +241,8 @@ class TimeSeriesDataset(BaseDataset):
         ------
         SchemaError
             If time index column is missing.
+        UnitError
+            If column_units contains invalid unit strings.
         DataValidationError
             If dataset is empty.
         """
@@ -190,4 +254,5 @@ class TimeSeriesDataset(BaseDataset):
             metadata=metadata,
             mapping=mapping,
             time_index_name=time_index_name,
+            column_units=column_units,
         )

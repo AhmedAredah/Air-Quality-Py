@@ -23,6 +23,8 @@ tests/
 : Follow standard conventions
 
 ## Recent Changes
+- 002-units-time: Added [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
+- 002-units-time: Added [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
 
 - 001-core-foundation: Added
 
