@@ -33,6 +33,7 @@ Provide a minimal, deterministic, Enum-based foundation for handling measurement
 ### Session 2025-11-08
 
 - Q: What rounding policy granularity should we adopt? → A: Per-unit defaults with optional per-pollutant overrides (centralized registry).
+- Q: How should invalid dataset-level unit metadata be handled? → A: Fail fast at construction with UnitError including offending column name.
 
 ## 2. Goals
 
@@ -114,6 +115,7 @@ Constitution references: Sections 3 (canonical schema/metadata), 15 (units regis
 - FR-D02: Provide `TimeSeriesDataset.column_units` property returning normalized mapping or None.
 - FR-D03: Failed unit normalization during dataset init MUST raise `UnitError` (explicit, not silent) to prevent hidden metadata inconsistencies.
 - FR-D04: No changes to existing dataset required canonical columns logic.
+- FR-D05: UnitError raised for invalid column unit MUST include the column name in the error message for traceability.
 
 ### Error Handling & Validation
 
@@ -166,6 +168,7 @@ Constitution references: Sections 8 (reporting), 15 (provenance/units).
 - AC5: README gains short usage section (<= 20 lines) demonstrating unit conversion + time bounds.
 - AC6: Performance smoke test (optional) demonstrates conversion speed target qualitatively.
 - AC7: Rounding policy registry covered by tests showing per-unit default and pollutant override precedence.
+- AC8: Dataset unit metadata validation tests assert UnitError message contains offending column name.
 
 Constitution Check Gate: Implementation MAY NOT proceed until this spec passes a Constitution Check confirming adherence to Sections 3, 7, 8, 9, 10, 11, and 15.
 
