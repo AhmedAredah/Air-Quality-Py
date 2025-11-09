@@ -32,14 +32,14 @@ Purpose: Ensure baseline environment & tooling (some already exist; tasks verify
 
 Purpose: Shared logic & utilities required across all stories.
 
-- [X] T008 Implement shared flag filtering helper in `src/air_quality/stats_analysis/core/common.py` (exclude invalid/outlier, mark below_dl missing)
-- [X] T009 [P] Implement numeric column validation helper in `src/air_quality/stats_analysis/core/validation.py`
+- [X] T008 ~~Implement shared flag filtering helper in `src/air_quality/stats_analysis/core/common.py` (exclude invalid/outlier, mark below_dl missing)~~ (MOVED: QC filtering functions moved to library-level `qc_flags.py`, common.py deleted)
+- [X] T009 [P] ~~Implement numeric column validation helper in `src/air_quality/stats_analysis/core/validation.py`~~ (REMOVED: Redundant with BaseDataset/TimeSeriesDataset validation. Stats modules validate inline using Polars expressions)
 - [X] T010 [P] Implement helper to compute quantiles list (5,25,75,95) in `src/air_quality/stats_analysis/core/descriptive.py` (placeholder returning list)
 - [X] T011 ~~Implement provenance attachment helper wrapper for stats in `src/air_quality/stats_analysis/core/provenance_helpers.py`~~ (REMOVED: Use library-level `provenance.py` instead)
-- [X] T012 [P] Add config dataclasses for each module in `src/air_quality/modules/configs.py`
-- [X] T013 Integrate time bounds retrieval via `time_utils.compute_time_bounds` into provenance helper
-- [X] T014 Add constants (allowed_time_units, default_min_samples, default_min_duration_years) in `src/air_quality/stats_analysis/core/constants.py`
-- [X] T015 [P] Add unit presence checking utility for trends & correlation in `src/air_quality/stats_analysis/core/units_check.py`
+- [X] T012 [P] Add config enums for each module in `src/air_quality/stats_analysis/configs.py`
+- [X] T013 ~~Integrate time bounds retrieval via `time_utils.compute_time_bounds` into provenance helper~~ (N/A: Use library-level provenance.py)
+- [X] T014 Add constants (enum-based TimeUnit, CorrelationMethod, StatisticType) in `src/air_quality/stats_analysis/core/constants.py`
+- [X] T015 [P] ~~Add unit presence checking utility for trends & correlation in `src/air_quality/stats_analysis/core/units_check.py`~~ (REMOVED: Incorrect design - checked pollutant names instead of column names. Unit validation handled by TimeSeriesDataset.column_units)
 - [X] T016 Add error mapping docstrings referencing Constitution sections in each new helper
 - [X] T017 Create initial perf synthetic dataset factory in `tests/perf_smoke/factories.py`
 - [X] T018 [P] Add test utilities for random reproducible dataset generation in `tests/unit/stats_core/utils.py`
