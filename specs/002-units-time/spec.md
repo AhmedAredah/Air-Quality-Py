@@ -4,6 +4,26 @@ Status: Draft
 Last Updated: 2025-11-08
 Owner: TBD
 
+## Constitution Compliance Summary
+
+This feature is designed under the air_quality Constitution v1.0.0. Key enforced sections:
+
+- Section 3 (Data & Metadata Standards):
+  - Columnar-first; time bounds computed with Polars and single collect.
+  - Canonicalization and mapping metadata remain unchanged; unit metadata stored/validated explicitly.
+- Section 7 (Core Architecture & AirQualityModule Interface):
+  - Shared utilities (units/time) are centralized; no module-specific duplicates.
+- Section 8 (Reporting & Visualization):
+  - Rounding rules intended for consistent reporting; dashboard/CLI will consume standardized units/precision.
+- Section 9 (API, Error Taxonomy & Docs):
+  - Use existing `UnitError`; public APIs documented with types and exceptions.
+- Section 10 (Testing, Reproducibility):
+  - Tests planned for unit/rounding/time utilities; deterministic behavior.
+- Section 11 (Performance & Scalability):
+  - Vectorized conversions; avoid row-wise loops; single `.collect()` in bounds.
+- Section 15 (Provenance, Units & Reproducibility):
+  - Central units registry; clear rounding policy; ready for provenance attachment by modules.
+
 ## 1. Overview
 
 Provide a minimal, deterministic, Enum-based foundation for handling measurement units (concentration) and core time operations (bounds, resampling, rolling statistics) across air quality datasets. Must reinforce constitution principles: columnar-first, DRY, provenance-friendly, no free-form strings for controlled vocabularies.
@@ -56,6 +76,8 @@ Each requirement gets an ID for checklist mapping.
 
 ### Units
 
+Constitution references: Sections 9 (API & errors), 11 (performance), 15 (units registry).
+
 - FR-U01: Provide `Unit` Enum with members: UG_M3("ug/m3"), MG_M3("mg/m3"), PPM("ppm"), PPB("ppb").
 - FR-U02: Implement `Unit.parse(value: str | Unit) -> Unit` raising `UnitError` on invalid input.
 - FR-U03: Implement `can_convert(src: Unit, dst: Unit) -> bool` supporting identity and defined factors.
@@ -67,6 +89,8 @@ Each requirement gets an ID for checklist mapping.
 
 ### Time Utilities
 
+Constitution references: Sections 3 (time/UTC), 11 (columnar/vectorized), 10 (testing & reproducibility).
+
 - FR-T01: Implement `TimeBounds` dataclass with `start` and `end` (timezone-aware UTC datetimes).
 - FR-T02: Implement `ensure_timezone_aware(dt)` adding UTC tzinfo if naive.
 - FR-T03: Implement `to_utc(dt)` converting any aware datetime to UTC.
@@ -77,6 +101,8 @@ Each requirement gets an ID for checklist mapping.
 
 ### Dataset Integration
 
+Constitution references: Sections 3 (canonical schema/metadata), 15 (units registry normalization).
+
 - FR-D01: `TimeSeriesDataset` accepts optional metadata key `column_units` at construction; if present and dict, normalize via `validate_units_schema`.
 - FR-D02: Provide `TimeSeriesDataset.column_units` property returning normalized mapping or None.
 - FR-D03: Failed unit normalization during dataset init MUST raise `UnitError` (explicit, not silent) to prevent hidden metadata inconsistencies.
@@ -84,11 +110,15 @@ Each requirement gets an ID for checklist mapping.
 
 ### Error Handling & Validation
 
+Constitution references: Section 9 (error taxonomy, docs).
+
 - FR-E01: Reuse existing `UnitError` from exceptions module; never introduce new exception types for this feature.
 - FR-E02: Error messages must include both source and destination units for conversion failures.
 - FR-E03: Rounding and conversion must reject non-numeric dtypes with a TypeError mentioning unsupported type name.
 
 ### Reporting & Provenance Readiness
+
+Constitution references: Sections 8 (reporting), 15 (provenance/units).
 
 - FR-R01: All unit conversion and rounding functions are pure (no mutation of input objects).
 - FR-R02: Time bounds function is deterministic given dataset content.
@@ -127,6 +157,8 @@ Each requirement gets an ID for checklist mapping.
 - AC4: Existing 73 tests remain green (no regressions).
 - AC5: README gains short usage section (<= 20 lines) demonstrating unit conversion + time bounds.
 - AC6: Performance smoke test (optional) demonstrates conversion speed target qualitatively.
+
+Constitution Check Gate: Implementation MAY NOT proceed until this spec passes a Constitution Check confirming adherence to Sections 3, 7, 8, 9, 10, 11, and 15.
 
 ## 10. Open Questions / Clarifications
 

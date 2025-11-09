@@ -4,7 +4,9 @@ Status: Draft
 
 Legend: [ ] Pending  [x] Verified  [! ] Needs Clarification
 
-## Functional Requirements (Units)
+Constitution Gate: No implementation may proceed until this checklist is fully satisfied for Sections 3, 7, 8, 9, 10, 11, and 15 of the Constitution.
+
+## Functional Requirements (Units) — Sec 9, Sec 11, Sec 15
 
 - [ ] FR-U01 Enum defined with all members
 - [ ] FR-U02 Unit.parse raises UnitError on invalid
@@ -15,7 +17,7 @@ Legend: [ ] Pending  [x] Verified  [! ] Needs Clarification
 - [ ] FR-U07 validate_units_schema normalizes / errors include column
 - [ ] FR-U08 Type annotations complete (no Any)
 
-## Functional Requirements (Time Utilities)
+## Functional Requirements (Time Utilities) — Sec 3, Sec 10, Sec 11
 
 - [ ] FR-T01 TimeBounds dataclass UTC aware
 - [ ] FR-T02 ensure_timezone_aware sets UTC if naive
@@ -25,26 +27,26 @@ Legend: [ ] Pending  [x] Verified  [! ] Needs Clarification
 - [ ] FR-T06 rolling_window_mean centered, min_periods=1
 - [ ] FR-T07 No row-wise Python loops
 
-## Functional Requirements (Dataset Integration)
+## Functional Requirements (Dataset Integration) — Sec 3, Sec 15
 
 - [ ] FR-D01 Metadata column_units accepted
 - [ ] FR-D02 column_units property returns mapping
 - [ ] FR-D03 Invalid unit metadata raises UnitError
 - [ ] FR-D04 Canonical columns logic unchanged
 
-## Functional Requirements (Errors & Validation)
+## Functional Requirements (Errors & Validation) — Sec 9
 
 - [ ] FR-E01 Reuse UnitError only
 - [ ] FR-E02 Conversion failure message includes src & dst
 - [ ] FR-E03 Non-numeric types raise TypeError with type name
 
-## Functional Requirements (Reporting & Provenance)
+## Functional Requirements (Reporting & Provenance) — Sec 8, Sec 15
 
 - [ ] FR-R01 Pure conversion/rounding (no mutation)
 - [ ] FR-R02 compute_time_bounds deterministic
 - [ ] FR-R03 Docstrings reference constitution sections
 
-## Non-Functional Requirements
+## Non-Functional Requirements — Sec 11
 
 - [ ] NFR-P01 1M length conversion < 50 ms (smoke)
 - [ ] NFR-T01 No new deps added
