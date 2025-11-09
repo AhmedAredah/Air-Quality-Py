@@ -27,15 +27,15 @@ Contracts specify behavior and error modes; no implementation code here.
 
 ### resample_mean
 
-- Signature: `pd.DataFrame resample_mean(df: pd.DataFrame, rule: str = "1H", time_col: str = "datetime")`
-- Behavior: Uses pandas resample on datetime index/column; returns mean of numeric columns; input is not mutated.
-- Errors: Raises if datetime coercion fails; type errors surfaced; do not mutate original df.
+- Signature: `pd.DataFrame resample_mean(df: pd.DataFrame, rule: str = "1H", time_col: str = "datetime", columns: list[str] | None = None)`
+- Behavior: Uses pandas resample on datetime index/column; returns mean of numeric columns (all numeric if columns=None, or specified subset if columns provided); input is not mutated.
+- Errors: Raises if datetime coercion fails; KeyError if specified column not found; type errors surfaced; do not mutate original df.
 
 ### rolling_window_mean
 
-- Signature: `pd.DataFrame rolling_window_mean(df: pd.DataFrame, window: int = 3, time_col: str = "datetime")`
-- Behavior: Centered rolling mean with min_periods=1; sorts by time first; numeric columns only; returns new df.
-- Errors: ValueError if window < 1; datetime parse errors surfaced.
+- Signature: `pd.DataFrame rolling_window_mean(df: pd.DataFrame, window: int = 3, time_col: str = "datetime", columns: list[str] | None = None)`
+- Behavior: Centered rolling mean with min_periods=1; sorts by time first; numeric columns only (all numeric if columns=None, or specified subset if columns provided); returns new df.
+- Errors: ValueError if window < 1; KeyError if specified column not found; datetime parse errors surfaced.
 
 ## Non-Functional
 

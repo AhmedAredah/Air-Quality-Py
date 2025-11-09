@@ -1,79 +1,112 @@
-# Implementation Plan: Feature 002 — Units & Time Primitives (Enum-Based)
+# Implementation Plan: [FEATURE]
 
-**Branch**: `002-units-time` | **Date**: 2025-11-08 | **Spec**: specs/002-units-time/spec.md
-**Input**: Feature specification from `/specs/002-units-time/spec.md`
+**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
+**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
+
+**Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/commands/plan.md` for the execution workflow.
 
 ## Summary
 
-### Scope
-
-Provide Enum-based units primitives and time utilities with:
-
-- Central units registry (per-unit defaults; optional per-pollutant rounding overrides).
-- Deterministic conversions among ug/m3, mg/m3, ppm, ppb (vectorized; no row loops).
-- Reporting rounding via centralized policy.
-- Time utilities: UTC-aware time bounds (preserve sub-second precision), pandas-based resampling (boundary), centered rolling mean.
-- Dataset integration: strict validation of `column_units` (fail-fast UnitError includes column name).
-
-No implementation occurs in this phase; this plan produces research, data model, API contracts, and quickstart.
+[Extract from feature spec: primary requirement + technical approach from research]
 
 ## Technical Context
 
-**Language/Version**: Python 3.12
-**Primary Dependencies**: Polars, pandas, PyArrow, pytest, mypy (stubs: pandas-stubs, pyarrow-stubs)
-**Storage**: Columnar in-memory via Polars LazyFrame; Arrow interchange at boundaries
-**Testing**: pytest; mypy static type checking
-**Target Platform**: Cross-platform (dev on Windows), CI-ready
-**Project Type**: Python library (single repo; src/air_quality)
-**Performance Goals**: Conversion of 1M values < 50 ms (smoke), single collect in time bounds, fully vectorized operations
-**Constraints**: Columnar-first (Sec 3, 11); no Python row loops; immutability for utilities; no new runtime deps beyond stack
-**Scale/Scope**: Millions of rows typical; multiple sites; sub-second timestamps supported
+<!--
+  ACTION REQUIRED: Replace the content in this section with the technical details
+  for the project. The structure here is presented in advisory capacity to guide
+  the iteration process.
+-->
+
+**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
+**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
+**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
+**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
+**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
+**Project Type**: [single/web/mobile - determines source structure]  
+**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
+**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
+**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
 
 ## Constitution Check
 
-GATE status: PASS (design aligned with spec and constitution). Re-evaluated after Phase 1 artifacts; no violations found.
+*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-- Data schema & mapping: No ad-hoc mapping introduced. Dataset integration preserves mapping metadata; reuses centralized ColumnMapper (unchanged).
-- Architecture: Shared utilities (units/time) are centralized; future modules continue to inherit from `AirQualityModule` (no changes required).
-- Performance: Vectorized multiplications only; Polars aggregation for bounds; pandas only at boundary resampling; no row-wise Python loops.
-- Units & provenance: Central units registry; rounding policy centralized; ready for downstream provenance attachment by modules.
-- Reporting: Rounding policy supports consistent metrics presentation; modules will include units and provenance in dashboard/CLI.
-- Testing/benchmarks: Plan includes unit tests for conversions, rounding policy precedence, bounds precision, resampling immutability, and error messages.
-- EJ/health/ethics: N/A for this foundational utility; no sensitive data added; policies remain consistent with Sec 6.
+The following MUST be explicitly addressed and linked to the design/spec:
 
-Re-check after Phase 1 design: PASS.
+- Data schema & mapping: uses centralized three-level column-mapping utility; required canonical fields identified; mapping plan for user inputs; no ad-hoc mapping.
+- Architecture: module(s) inherit from `AirQualityModule` and provide `from_dataframe`/`from_dataset`/`run`/`report_dashboard`/`report_cli` with required hooks.
+- Performance: large-dataset plan (columnar I/O with Arrow/Parquet; vectorized operations; chunking/streaming if needed; no Python row loops in critical paths).
+- Units & provenance: central units registry usage; provenance fields to be attached by `run()`; RNG seed strategy if stochastic.
+- Reporting: dashboard schema_version and CLI content (inputs, methods, key results, QC/caveats, mapping summary).
+- Testing/benchmarks: regression tests for numerics; coverage targets; performance baseline/guardrails; validation/doctor CLI coverage.
+- EJ/health/ethics: disparity metrics or safeguards as applicable; privacy/aggregation rules if sensitive data.
 
 ## Project Structure
 
 ### Documentation (this feature)
 
 ```text
-specs/002-units-time/
-├── plan.md          # This file
-├── research.md      # Phase 0 output
-├── data-model.md    # Phase 1 output
-├── quickstart.md    # Phase 1 output
-└── contracts/       # Phase 1 output (units_api.md, time_utils_api.md)
+specs/[###-feature]/
+├── plan.md              # This file (/speckit.plan command output)
+├── research.md          # Phase 0 output (/speckit.plan command)
+├── data-model.md        # Phase 1 output (/speckit.plan command)
+├── quickstart.md        # Phase 1 output (/speckit.plan command)
+├── contracts/           # Phase 1 output (/speckit.plan command)
+└── tasks.md             # Phase 2 output (/speckit.tasks command - NOT created by /speckit.plan)
 ```
 
 ### Source Code (repository root)
+<!--
+  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
+  for this feature. Delete unused options and expand the chosen structure with
+  real paths (e.g., apps/admin, packages/something). The delivered plan must
+  not include Option labels.
+-->
 
 ```text
+# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
 src/
-└── air_quality/
-    ├── dataset/
-    ├── modules/
-    ├── mapping.py
-    ├── module.py
-    ├── exceptions.py
-    └── [future] units.py, time_utils.py  # to be added in implementation phase
+├── models/
+├── services/
+├── cli/
+└── lib/
 
 tests/
-└── [future] test_units_*.py, test_time_*.py
+├── contract/
+├── integration/
+└── unit/
+
+# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
+backend/
+├── src/
+│   ├── models/
+│   ├── services/
+│   └── api/
+└── tests/
+
+frontend/
+├── src/
+│   ├── components/
+│   ├── pages/
+│   └── services/
+└── tests/
+
+# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
+api/
+└── [same as backend above]
+
+ios/ or android/
+└── [platform-specific structure: feature modules, UI flows, platform tests]
 ```
 
-**Structure Decision**: Single Python library; shared utilities in `src/air_quality/` to enforce DRY and centralization.
+**Structure Decision**: [Document the selected structure and reference the real
+directories captured above]
 
 ## Complexity Tracking
 
-None.
+> **Fill ONLY if Constitution Check has violations that must be justified**
+
+| Violation | Why Needed | Simpler Alternative Rejected Because |
+|-----------|------------|-------------------------------------|
+| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
+| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
