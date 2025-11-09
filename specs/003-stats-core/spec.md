@@ -10,7 +10,8 @@
 ### Session 2025-11-09
 
 - Q: Define allowed `time_unit` values and precise semantics for Trend primitives (calendar-aware vs fixed averages)? → A: hour, day, calendar_month, calendar_year with calendar-aware boundaries, and allow future expansion.
-- Q: What is the default `min_samples` for correlation/trend, and is it configurable? → A: default 3, configurable via module config; core returns true n, modules flag `low_n` when `n < min_samples`.
+- Q: What is the default `min_samples` for correlation/trend, and is it configurable? → A: default 5, configurable via module config; core returns true n, modules flag `low_n` when `n < min_samples`.
+- Q: Correlation unit requirements (enforce known units vs flexibility) and override behavior? → A: Require known units metadata by default; allow config override to proceed when units are missing (`allow_missing_units=True`); permit mixed unit families without conversion; always record units presence and override flag in provenance.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -82,6 +83,8 @@ As an analyst, I want simple linear trends (value ~ time) for pollutants by grou
 - Duplicated pairs in correlation → enforce single ordered pair `(var_x <= var_y)` including diagonals.
 - Flagged rows (`invalid`, `outlier`) → excluded from computations; counts reflect exclusions. Rows flagged `below_dl` are treated as missing for this feature (no imputation), counted in `n_missing`.
 - No grouping columns provided → global aggregation behaves consistently and returns expected schema.
+- Missing units for correlation when `allow_missing_units=False` → raise `UnitError`; when override enabled, proceed and annotate provenance with `units_status="missing_overridden"` and CLI warning.
+- Mixed unit families in correlation (e.g., mass vs volume) allowed (scale-invariant); record both units in provenance; no conversion performed.
 
 ## Requirements *(mandatory)*
 
@@ -110,6 +113,7 @@ As an analyst, I want simple linear trends (value ~ time) for pollutants by grou
 - **FR-009 (Performance)**: All primitives MUST be expressible with columnar group-by/aggregation expressions (vectorized; no Python row loops); include at least one 100k-row smoke/perf test per primitive.
 - **FR-010 (Reproducibility)**: Given identical inputs/configs, results MUST be deterministic within documented numeric tolerances.
  - **FR-011 (Thresholds/min_samples)**: Default `min_samples = 3` for CorrelationModule and TrendModule; configurable via module config. Core primitives NEVER drop results solely due to low sample size; modules apply `low_n` flags and CLI warnings when `n < min_samples`.
+ - **FR-012 (Correlation Units Override)**: CorrelationModule requires known unit metadata for all selected pollutant concentration columns by default; mixed unit families permitted without conversion. A config flag (`allow_missing_units=True`) allows operation when units are partially or wholly missing; in such cases module records override in provenance (fields: `units_status`, list of columns missing units) and emits a CLI warning. Missing units without override raise `UnitError`.
 
 ### Key Entities *(include if feature involves data)*
 
