@@ -7,14 +7,12 @@ Constitution compliance:
 - Section 8: Module-specific enums and settings
 
 Note: TimeUnit is defined in air_quality.units (shared across library)
-Note: QCFlag is defined in air_quality.qc_flags (shared across library)
 """
 
 from __future__ import annotations
 
 from enum import Enum
 
-from ....qc_flags import EXCLUDE_FLAGS, MISSING_FLAGS, QCFlag
 from ....units import TimeUnit
 
 
@@ -114,9 +112,6 @@ __all__ = [
     "CorrelationMethod",
     "StatisticType",
     "TimeUnit",
-    "QCFlag",
-    "EXCLUDE_FLAGS",
-    "MISSING_FLAGS",
     "DEFAULT_MIN_SAMPLES",
     "DEFAULT_MIN_DURATION_YEARS",
     "DEFAULT_QUANTILES",

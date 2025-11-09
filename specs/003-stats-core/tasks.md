@@ -35,7 +35,7 @@ Purpose: Shared logic & utilities required across all stories.
 - [X] T008 Implement shared flag filtering helper in `src/air_quality/stats_analysis/core/common.py` (exclude invalid/outlier, mark below_dl missing)
 - [X] T009 [P] Implement numeric column validation helper in `src/air_quality/stats_analysis/core/validation.py`
 - [X] T010 [P] Implement helper to compute quantiles list (5,25,75,95) in `src/air_quality/stats_analysis/core/descriptive.py` (placeholder returning list)
-- [X] T011 Implement provenance attachment helper wrapper for stats in `src/air_quality/stats_analysis/core/provenance_helpers.py`
+- [X] T011 ~~Implement provenance attachment helper wrapper for stats in `src/air_quality/stats_analysis/core/provenance_helpers.py`~~ (REMOVED: Use library-level `provenance.py` instead)
 - [X] T012 [P] Add config dataclasses for each module in `src/air_quality/modules/configs.py`
 - [X] T013 Integrate time bounds retrieval via `time_utils.compute_time_bounds` into provenance helper
 - [X] T014 Add constants (allowed_time_units, default_min_samples, default_min_duration_years) in `src/air_quality/stats_analysis/core/constants.py`

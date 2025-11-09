@@ -1,6 +1,6 @@
 """air_quality.stats_analysis.configs
 
-Configuration dataclasses for statistical analysis modules.
+Configuration enums for statistical analysis modules.
 
 Constitution compliance:
 - Section 7: Module configuration validation
@@ -9,16 +9,14 @@ Constitution compliance:
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Optional
+from enum import Enum
 
 from ..units import TimeUnit
 from .core.constants import CorrelationMethod
 
 
-@dataclass(frozen=True, slots=True)
-class DescriptiveStatsConfig:
-    """Configuration for descriptive statistics module.
+class DescriptiveStatsConfig(str, Enum):
+    """Configuration keys for descriptive statistics module.
 
     Constitution References
     -----------------------
@@ -26,28 +24,27 @@ class DescriptiveStatsConfig:
 
     Attributes
     ----------
-    group_by : list[str] | None
+    GROUP_BY : str
         Grouping columns (None for global aggregation).
-    quantiles : tuple[float, ...], default=(0.05, 0.25, 0.75, 0.95)
+    QUANTILES : str
         Quantile levels to compute.
-    pollutant_col : str, default='pollutant'
+    POLLUTANT_COL : str
         Pollutant identifier column name.
-    conc_col : str, default='conc'
+    CONC_COL : str
         Concentration value column name.
-    flag_col : str, default='flag'
+    FLAG_COL : str
         QC flag column name.
     """
 
-    group_by: Optional[list[str]] = None
-    quantiles: tuple[float, ...] = (0.05, 0.25, 0.75, 0.95)
-    pollutant_col: str = "pollutant"
-    conc_col: str = "conc"
-    flag_col: str = "flag"
+    GROUP_BY = "group_by"
+    QUANTILES = "quantiles"
+    POLLUTANT_COL = "pollutant_col"
+    CONC_COL = "conc_col"
+    FLAG_COL = "flag_col"
 
 
-@dataclass(frozen=True, slots=True)
-class CorrelationConfig:
-    """Configuration for correlation analysis module.
+class CorrelationConfig(str, Enum):
+    """Configuration keys for correlation analysis module.
 
     Constitution References
     -----------------------
@@ -56,36 +53,33 @@ class CorrelationConfig:
 
     Attributes
     ----------
-    group_by : list[str] | None
-        Grouping columns (None for global aggregation).
-    method : CorrelationMethod, default=CorrelationMethod.PEARSON
+    METHOD : str
         Correlation method (PEARSON or SPEARMAN).
-    min_samples : int, default=3
+    GROUP_BY : str
+        Grouping columns (None for global aggregation).
+    MIN_SAMPLES : str
         Minimum number of valid pairwise observations.
-    allow_missing_units : bool, default=False
+    ALLOW_MISSING_UNITS : str
         Whether to allow correlation with missing unit metadata.
-        If False, raises UnitError for pollutants without units.
-        If True, proceeds and records override in provenance.
-    pollutant_col : str, default='pollutant'
+    POLLUTANT_COL : str
         Pollutant identifier column name.
-    conc_col : str, default='conc'
+    CONC_COL : str
         Concentration value column name.
-    flag_col : str, default='flag'
+    FLAG_COL : str
         QC flag column name.
     """
 
-    method: CorrelationMethod = CorrelationMethod.PEARSON
-    group_by: Optional[list[str]] = None
-    min_samples: int = 3
-    allow_missing_units: bool = False
-    pollutant_col: str = "pollutant"
-    conc_col: str = "conc"
-    flag_col: str = "flag"
+    METHOD = "method"
+    GROUP_BY = "group_by"
+    MIN_SAMPLES = "min_samples"
+    ALLOW_MISSING_UNITS = "allow_missing_units"
+    POLLUTANT_COL = "pollutant_col"
+    CONC_COL = "conc_col"
+    FLAG_COL = "flag_col"
 
 
-@dataclass(frozen=True, slots=True)
-class TrendConfig:
-    """Configuration for linear trend analysis module.
+class TrendConfig(str, Enum):
+    """Configuration keys for linear trend analysis module.
 
     Constitution References
     -----------------------
@@ -94,30 +88,36 @@ class TrendConfig:
 
     Attributes
     ----------
-    time_unit : TimeUnit
+    TIME_UNIT : str
         Time unit for slope computation (calendar-aware semantics).
-        One of: TimeUnit.HOUR, TimeUnit.DAY, TimeUnit.CALENDAR_MONTH, TimeUnit.CALENDAR_YEAR.
-    group_by : list[str] | None
+    GROUP_BY : str
         Grouping columns (None for global aggregation).
-    min_samples : int, default=3
+    MIN_SAMPLES : str
         Minimum number of valid observations for trend.
-    min_duration_years : float, default=1.0
+    MIN_DURATION_YEARS : str
         Minimum duration in years (flagged if shorter).
-    pollutant_col : str, default='pollutant'
+    POLLUTANT_COL : str
         Pollutant identifier column name.
-    conc_col : str, default='conc'
+    CONC_COL : str
         Concentration value column name.
-    flag_col : str, default='flag'
+    FLAG_COL : str
         QC flag column name.
-    datetime_col : str, default='datetime'
+    DATETIME_COL : str
         Datetime column name for time index.
     """
 
-    time_unit: TimeUnit
-    group_by: Optional[list[str]] = None
-    min_samples: int = 3
-    min_duration_years: float = 1.0
-    pollutant_col: str = "pollutant"
-    conc_col: str = "conc"
-    flag_col: str = "flag"
-    datetime_col: str = "datetime"
+    TIME_UNIT = "time_unit"
+    GROUP_BY = "group_by"
+    MIN_SAMPLES = "min_samples"
+    MIN_DURATION_YEARS = "min_duration_years"
+    POLLUTANT_COL = "pollutant_col"
+    CONC_COL = "conc_col"
+    FLAG_COL = "flag_col"
+    DATETIME_COL = "datetime_col"
+
+
+__all__ = [
+    "DescriptiveStatsConfig",
+    "CorrelationConfig",
+    "TrendConfig",
+]
