@@ -9,7 +9,8 @@
 
 ### Session 2025-11-09
 
-- Q: Define allowed `time_unit` values and precise semantics for Trend primitives (calendar-aware vs fixed averages)? → A: Option B — hour, day, calendar_month, calendar_year with calendar-aware boundaries, and allow future expansion.
+- Q: Define allowed `time_unit` values and precise semantics for Trend primitives (calendar-aware vs fixed averages)? → A: hour, day, calendar_month, calendar_year with calendar-aware boundaries, and allow future expansion.
+- Q: What is the default `min_samples` for correlation/trend, and is it configurable? → A: default 3, configurable via module config; core returns true n, modules flag `low_n` when `n < min_samples`.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -77,7 +78,7 @@ As an analyst, I want simple linear trends (value ~ time) for pollutants by grou
 
 - Non-numeric value columns passed to core primitives → raise `DataValidationError` listing offending columns.
 - Mixed units or missing unit metadata for requested pollutant trends → raise `UnitError`.
-- Very small sample sizes (`n < min_samples`) → primitives still return values with true `n`; modules flag as `low_n` without raising.
+- Very small sample sizes (`n < min_samples`, default 3) → primitives still return values with true `n`; modules flag as `low_n` without raising.
 - Duplicated pairs in correlation → enforce single ordered pair `(var_x <= var_y)` including diagonals.
 - Flagged rows (`invalid`, `outlier`) → excluded from computations; counts reflect exclusions. Rows flagged `below_dl` are treated as missing for this feature (no imputation), counted in `n_missing`.
 - No grouping columns provided → global aggregation behaves consistently and returns expected schema.
@@ -108,6 +109,7 @@ As an analyst, I want simple linear trends (value ~ time) for pollutants by grou
 - **FR-008 (Reporting)**: Modules MUST output both dashboard payloads and CLI summaries containing metrics, counts, provenance, and clear notes for low sample sizes and QC filtering.
 - **FR-009 (Performance)**: All primitives MUST be expressible with columnar group-by/aggregation expressions (vectorized; no Python row loops); include at least one 100k-row smoke/perf test per primitive.
 - **FR-010 (Reproducibility)**: Given identical inputs/configs, results MUST be deterministic within documented numeric tolerances.
+ - **FR-011 (Thresholds/min_samples)**: Default `min_samples = 3` for CorrelationModule and TrendModule; configurable via module config. Core primitives NEVER drop results solely due to low sample size; modules apply `low_n` flags and CLI warnings when `n < min_samples`.
 
 ### Key Entities *(include if feature involves data)*
 
