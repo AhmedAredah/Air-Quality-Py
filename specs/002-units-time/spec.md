@@ -36,6 +36,7 @@ Provide a minimal, deterministic, Enum-based foundation for handling measurement
 - Q: How should invalid dataset-level unit metadata be handled? → A: Fail fast at construction with UnitError including offending column name.
 - Q: Which backend should power resampling utilities? → A: Use pandas at boundary functions (pandas resample) while keeping Polars as internal columnar core.
 - Q: What is the initial scope of supported units? → A: Minimal concentration units only (ug/m3, mg/m3, ppm, ppb); allow additive extensions later via registry updates.
+- Q: What precision/timezone policy for time bounds? → A: Preserve full incoming precision; always return timezone-aware UTC datetimes (no truncation/rounding).
 
 ## 2. Goals
 
@@ -102,10 +103,10 @@ Constitution references: Sections 9 (API & errors), 11 (performance), 15 (units 
 
 Constitution references: Sections 3 (time/UTC), 11 (columnar/vectorized), 10 (testing & reproducibility).
 
-- FR-T01: Implement `TimeBounds` dataclass with `start` and `end` (timezone-aware UTC datetimes).
+- FR-T01: Implement `TimeBounds` dataclass with `start` and `end` (timezone-aware UTC datetimes). Preserve full sub-second precision from the source values (no truncation/rounding).
 - FR-T02: Implement `ensure_timezone_aware(dt)` adding UTC tzinfo if naive.
 - FR-T03: Implement `to_utc(dt)` converting any aware datetime to UTC.
-- FR-T04: Implement `compute_time_bounds(lazyframe, time_col="datetime") -> TimeBounds` using Polars min/max aggregation (single collect) and ensuring UTC.
+- FR-T04: Implement `compute_time_bounds(lazyframe, time_col="datetime") -> TimeBounds` using Polars min/max aggregation (single collect) and ensuring UTC. Normalize outputs to timezone-aware UTC while preserving the exact min/max timestamp precision provided by the backend.
 - FR-T05: Implement `resample_mean(df, rule="1H", time_col="datetime")` using pandas resample, returning new DataFrame with mean of numeric columns only.
 - FR-T06: Implement `rolling_window_mean(df, window=3, time_col="datetime")` producing centered rolling mean for numeric columns (min_periods=1) sorted by time.
 - FR-T07: All time utilities must avoid row-wise Python loops over data rows (vectorized Pandas/Polars only).
@@ -164,6 +165,7 @@ Constitution references: Sections 8 (reporting), 15 (provenance/units).
 - EC8: If a pollutant-specific rounding override is defined, it supersedes the unit default.
 - EC9: Resample functions do not alter original DataFrame (identity of non-time columns preserved; object equality by reference allowed to differ).
 - EC10: Parsing an unknown unit string raises UnitError (explicitly tested).
+- EC11: Sub-second (micro/nano) precision in min/max timestamps is preserved in `compute_time_bounds`; outputs are tz-aware UTC.
 
 ## 9. Acceptance Criteria
 
@@ -177,6 +179,7 @@ Constitution references: Sections 8 (reporting), 15 (provenance/units).
 - AC8: Dataset unit metadata validation tests assert UnitError message contains offending column name.
 - AC9: Resample immutability test confirms original DataFrame unchanged and function returns a new object.
 - AC10: Unit parse/validation tests confirm only UG_M3, MG_M3, PPM, PPB are accepted initially; unknowns raise UnitError; no string passthrough allowed.
+- AC11: Time bounds tests verify tz-aware UTC outputs and equality with exact min/max including sub-second precision (no truncation).
 
 Constitution Check Gate: Implementation MAY NOT proceed until this spec passes a Constitution Check confirming adherence to Sections 3, 7, 8, 9, 10, 11, and 15.
 
