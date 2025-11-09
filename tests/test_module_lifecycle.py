@@ -14,7 +14,9 @@ import pandas as pd
 import pytest
 
 from air_quality.exceptions import ConfigurationError
+from air_quality.module import SystemResultKey
 from air_quality.modules import RowCountModule, RowCountOperation
+from air_quality.modules.row_count import RowCountMetadata, RowCountResult
 
 
 def test_rowcount_from_dataframe_success():
@@ -30,8 +32,8 @@ def test_rowcount_from_dataframe_success():
 
     module = RowCountModule.from_dataframe(df)
 
-    assert module.MODULE_NAME == "row_count"
-    assert module.DOMAIN == "qc"
+    assert module.MODULE_NAME.value == "row_count"
+    assert module.DOMAIN.value == "qc"
     assert module.dataset.n_rows == 10
     assert not module._has_run
 
@@ -52,7 +54,7 @@ def test_rowcount_from_dataset_success():
     dataset = TimeSeriesDataset.from_dataframe(df)
     module = RowCountModule.from_dataset(dataset)
 
-    assert module.MODULE_NAME == "row_count"
+    assert module.MODULE_NAME.value == "row_count"
     assert module.dataset.n_rows == 5
 
 
@@ -74,15 +76,15 @@ def test_rowcount_run_default_operations():
     assert result is module
 
     # Results should be populated
-    assert "row_count" in module.results
-    assert module.results["row_count"] == 20
-    assert "qc_zero_rows" in module.results
-    assert module.results["qc_zero_rows"] is False
+    assert RowCountResult.ROW_COUNT in module.results
+    assert module.results[RowCountResult.ROW_COUNT] == 20
+    assert RowCountResult.QC_ZERO_ROWS in module.results
+    assert module.results[RowCountResult.QC_ZERO_ROWS] is False
 
     # Provenance should be attached
     assert module.provenance is not None
-    assert module.provenance.module_name == "row_count"
-    assert module.provenance.domain == "qc"
+    assert module.provenance.module.value == "row_count"
+    assert module.provenance.domain.value == "qc"
 
     # Should mark as run
     assert module._has_run
@@ -105,11 +107,11 @@ def test_rowcount_run_specific_operations():
     module.run(operations=[RowCountOperation.COUNT_ROWS])
 
     # COUNT_ROWS should have run
-    assert "row_count" in module.results
-    assert module.results["row_count"] == 15
+    assert RowCountResult.ROW_COUNT in module.results
+    assert module.results[RowCountResult.ROW_COUNT] == 15
 
     # QC_CHECK should also run via _post_process
-    assert "qc_zero_rows" in module.results
+    assert RowCountResult.QC_ZERO_ROWS in module.results
 
 
 def test_rowcount_run_idempotence():
@@ -163,7 +165,8 @@ def test_dashboard_report_structure():
 
     # Check provenance dict
     prov = dashboard["provenance"]
-    assert "module_name" in prov
+    assert "module" in prov
+    assert prov["module"] == "row_count"  # Should be serialized to string value
     assert "run_timestamp" in prov
     assert "software_version" in prov
     assert "config_hash" in prov
@@ -276,6 +279,8 @@ def test_cli_report_before_run_raises():
 
 def test_provenance_populated_after_run():
     """Test provenance is properly populated after run()."""
+    from air_quality.modules.row_count import RowCountConfig
+
     df = pd.DataFrame(
         {
             "datetime": pd.date_range("2024-01-01", periods=12, freq="h"),
@@ -285,21 +290,22 @@ def test_provenance_populated_after_run():
         }
     )
 
-    config = {"some_param": 42}
+    # Note: RowCountModule has no config options, but we can pass empty dict
+    config = {}
     module = RowCountModule.from_dataframe(df, config=config)
     module.run()
 
     prov = module.provenance
     assert prov is not None
-    assert prov.module_name == "row_count"
-    assert prov.domain == "qc"
+    assert prov.module.value == "row_count"
+    assert prov.domain.value == "qc"
     assert prov.config_hash is not None
     assert prov.run_timestamp is not None
     assert prov.software_version is not None
 
     # Check elapsed time recorded
-    assert "_elapsed_seconds" in module.results
-    assert module.results["_elapsed_seconds"] >= 0
+    assert SystemResultKey.ELAPSED_SECONDS in module.results
+    assert module.results[SystemResultKey.ELAPSED_SECONDS] >= 0
 
 
 def test_enum_operation_selection():
@@ -318,15 +324,17 @@ def test_enum_operation_selection():
     # Test with only one operation
     module.run(operations=[RowCountOperation.COUNT_ROWS])
 
-    assert "row_count" in module.results
-    assert module.results["row_count"] == 10
+    assert RowCountResult.ROW_COUNT in module.results
+    assert module.results[RowCountResult.ROW_COUNT] == 10
 
     # QC should be added by _post_process
-    assert "qc_zero_rows" in module.results
+    assert RowCountResult.QC_ZERO_ROWS in module.results
 
 
 def test_config_validation_warning():
-    """Test config validation handles unexpected parameters with warning."""
+    """Test config validation rejects non-Enum keys."""
+    from air_quality.exceptions import ConfigurationError
+
     df = pd.DataFrame(
         {
             "datetime": pd.date_range("2024-01-01", periods=5, freq="h"),
@@ -336,9 +344,11 @@ def test_config_validation_warning():
         }
     )
 
-    # RowCountModule doesn't use config but should accept it with warning
+    # RowCountModule requires Enum keys, string keys should raise
     config = {"unused_param": 123}
-    module = RowCountModule.from_dataframe(df, config=config)
 
-    # Should construct successfully (warning logged)
-    assert module.config == config
+    with pytest.raises(ConfigurationError) as exc_info:
+        module = RowCountModule.from_dataframe(df, config=config)
+
+    assert "config keys must be instances of" in str(exc_info.value)
+    assert "got str" in str(exc_info.value)

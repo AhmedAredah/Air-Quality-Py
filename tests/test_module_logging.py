@@ -12,7 +12,9 @@ outside the test suite.
 
 import pandas as pd
 
+from air_quality.module import SystemResultKey
 from air_quality.modules import RowCountModule
+from air_quality.modules.row_count import RowCountResult
 
 
 def test_logging_doesnt_crash_module_run():
@@ -32,8 +34,8 @@ def test_logging_doesnt_crash_module_run():
 
     # Verify module completed successfully
     assert module.results is not None
-    assert "row_count" in module.results
-    assert module.results["row_count"] == 10
+    assert RowCountResult.ROW_COUNT in module.results
+    assert module.results[RowCountResult.ROW_COUNT] == 10
 
 
 def test_logging_elapsed_time_tracked():
@@ -51,15 +53,15 @@ def test_logging_elapsed_time_tracked():
     module.run()
 
     # Elapsed time should be in results
-    assert "_elapsed_seconds" in module.results
-    assert isinstance(module.results["_elapsed_seconds"], float)
-    assert module.results["_elapsed_seconds"] >= 0.0
+    assert SystemResultKey.ELAPSED_SECONDS in module.results
+    assert isinstance(module.results[SystemResultKey.ELAPSED_SECONDS], float)
+    assert module.results[SystemResultKey.ELAPSED_SECONDS] >= 0.0
     # Should complete quickly (< 5 seconds)
-    assert module.results["_elapsed_seconds"] < 5.0
+    assert module.results[SystemResultKey.ELAPSED_SECONDS] < 5.0
 
 
 def test_logging_with_config_warning():
-    """Test that unexpected config logging doesn't crash the module."""
+    """Test that logging works even with empty config."""
     df = pd.DataFrame(
         {
             "datetime": pd.date_range("2024-01-01", periods=5, freq="h"),
@@ -69,12 +71,11 @@ def test_logging_with_config_warning():
         }
     )
 
-    # RowCountModule doesn't use config, so this should log warning
-    config = {"unexpected_param": 42}
-    # If warning logging causes issues, this will raise an exception
+    # RowCountModule uses Enum keys for config (empty config is valid)
+    config = {}
     module = RowCountModule.from_dataframe(df, config=config)
 
-    # Verify module was created successfully despite warning
+    # Verify module was created successfully
     assert module is not None
     assert module.config == config
 
@@ -95,10 +96,10 @@ def test_logging_during_multiple_operations():
     module.run()
 
     # Verify both operations completed
-    assert "row_count" in module.results
-    assert "qc_zero_rows" in module.results
-    assert module.results["row_count"] == 8
-    assert module.results["qc_zero_rows"] is False
+    assert RowCountResult.ROW_COUNT in module.results
+    assert RowCountResult.QC_ZERO_ROWS in module.results
+    assert module.results[RowCountResult.ROW_COUNT] == 8
+    assert module.results[RowCountResult.QC_ZERO_ROWS] is False
 
 
 def test_logging_works_across_module_instances():
@@ -130,5 +131,5 @@ def test_logging_works_across_module_instances():
     module2.run()
 
     # Verify both modules completed successfully
-    assert module1.results["row_count"] == 5
-    assert module2.results["row_count"] == 7
+    assert module1.results[RowCountResult.ROW_COUNT] == 5
+    assert module2.results[RowCountResult.ROW_COUNT] == 7

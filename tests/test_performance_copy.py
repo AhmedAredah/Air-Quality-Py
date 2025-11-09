@@ -14,6 +14,7 @@ import pyarrow as pa
 
 from air_quality.dataset import TimeSeriesDataset
 from air_quality.modules import RowCountModule
+from air_quality.modules.row_count import RowCountResult
 
 
 def test_dataset_from_dataframe_no_copy_of_input():
@@ -229,7 +230,10 @@ def test_multiple_modules_can_share_dataset():
     assert id(module2.dataset) == dataset_id
 
     # Both should get the same results
-    assert module1.results["row_count"] == module2.results["row_count"]
+    assert (
+        module1.results[RowCountResult.ROW_COUNT]
+        == module2.results[RowCountResult.ROW_COUNT]
+    )
 
 
 def test_memory_efficiency_documented():
