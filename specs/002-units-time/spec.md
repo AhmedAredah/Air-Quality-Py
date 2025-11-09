@@ -34,6 +34,7 @@ Provide a minimal, deterministic, Enum-based foundation for handling measurement
 
 - Q: What rounding policy granularity should we adopt? → A: Per-unit defaults with optional per-pollutant overrides (centralized registry).
 - Q: How should invalid dataset-level unit metadata be handled? → A: Fail fast at construction with UnitError including offending column name.
+- Q: Which backend should power resampling utilities? → A: Use pandas at boundary functions (pandas resample) while keeping Polars as internal columnar core.
 
 ## 2. Goals
 
@@ -106,6 +107,7 @@ Constitution references: Sections 3 (time/UTC), 11 (columnar/vectorized), 10 (te
 - FR-T05: Implement `resample_mean(df, rule="1H", time_col="datetime")` using pandas resample, returning new DataFrame with mean of numeric columns only.
 - FR-T06: Implement `rolling_window_mean(df, window=3, time_col="datetime")` producing centered rolling mean for numeric columns (min_periods=1) sorted by time.
 - FR-T07: All time utilities must avoid row-wise Python loops over data rows (vectorized Pandas/Polars only).
+- FR-T08: Resampling utilities MUST treat input DataFrame as immutable (no in-place mutation) and clearly document pandas boundary dependency.
 
 ### Dataset Integration
 
@@ -158,6 +160,7 @@ Constitution references: Sections 8 (reporting), 15 (provenance/units).
 - EC6: Resample on DataFrame lacking datetime dtype coerces to UTC via `pd.to_datetime`.
 - EC7: Invalid unit key in `column_units` metadata raises `UnitError` with column name.
 - EC8: If a pollutant-specific rounding override is defined, it supersedes the unit default.
+- EC9: Resample functions do not alter original DataFrame (identity of non-time columns preserved; object equality by reference allowed to differ).
 
 ## 9. Acceptance Criteria
 
@@ -169,6 +172,7 @@ Constitution references: Sections 8 (reporting), 15 (provenance/units).
 - AC6: Performance smoke test (optional) demonstrates conversion speed target qualitatively.
 - AC7: Rounding policy registry covered by tests showing per-unit default and pollutant override precedence.
 - AC8: Dataset unit metadata validation tests assert UnitError message contains offending column name.
+- AC9: Resample immutability test confirms original DataFrame unchanged and function returns a new object.
 
 Constitution Check Gate: Implementation MAY NOT proceed until this spec passes a Constitution Check confirming adherence to Sections 3, 7, 8, 9, 10, 11, and 15.
 
