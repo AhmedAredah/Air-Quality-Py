@@ -18,13 +18,13 @@ description: "Tasks for Feature 003 – Core Statistical Analysis"
 
 Purpose: Ensure baseline environment & tooling (some already exist; tasks verify or extend as needed).
 
-- [ ] T001 Verify existing `AirQualityModule` interface completeness against Constitution (no code change) in `src/air_quality/module.py`
-- [ ] T002 Add stats_analysis package init in `src/air_quality/stats_analysis/__init__.py`
-- [ ] T003 [P] Create core package directory tree in `src/air_quality/stats_analysis/core/` (empty __init__.py)
-- [ ] T004 [P] Add placeholder module files: `descriptive.py`, `correlation.py`, `trend.py` in `src/air_quality/stats_analysis/core/`
-- [ ] T005 Add module orchestrator stubs: `descriptive_stats.py`, `correlation.py`, `trend.py` in `src/air_quality/modules/`
-- [ ] T006 Configure mypy strict settings for new package if required in `pyproject.toml`
-- [ ] T007 Ensure test folder scaffolding: `tests/unit/stats_core/`, `tests/integration/modules/`, `tests/perf_smoke/`
+- [X] T001 Verify existing `AirQualityModule` interface completeness against Constitution (no code change) in `src/air_quality/module.py`
+- [X] T002 Add stats_analysis package init in `src/air_quality/stats_analysis/__init__.py`
+- [X] T003 [P] Create core package directory tree in `src/air_quality/stats_analysis/core/` (empty __init__.py)
+- [X] T004 [P] Add placeholder module files: `descriptive.py`, `correlation.py`, `trend.py` in `src/air_quality/stats_analysis/core/`
+- [X] T005 Add module orchestrator stubs: `descriptive_stats.py`, `correlation.py`, `trend.py` in `src/air_quality/modules/`
+- [X] T006 Configure mypy strict settings for new package if required in `pyproject.toml`
+- [X] T007 Ensure test folder scaffolding: `tests/unit/stats_core/`, `tests/integration/modules/`, `tests/perf_smoke/`
 
 ---
 
