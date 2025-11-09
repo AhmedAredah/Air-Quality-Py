@@ -15,7 +15,19 @@ from ..dataset.base import BaseDataset
 from ..dataset.time_series import TimeSeriesDataset
 from ..exceptions import ConfigurationError
 from ..mapping import ColumnMappingResult
-from ..module import AirQualityModule
+from ..module import AirQualityModule, ModuleDomain
+
+
+class RowCountModuleName(Enum):
+    """Module name identifier for row count module."""
+
+    VALUE = "row_count"
+
+
+class RowCountSchemaVersion(Enum):
+    """Output schema version for row count module."""
+
+    V1_0_0 = "1.0.0"
 
 
 class RowCountOperation(Enum):
@@ -33,12 +45,57 @@ class RowCountOperation(Enum):
     QC_CHECK = "qc_check"
 
 
+class RowCountConfig(Enum):
+    """Configuration keys for RowCountModule.
+
+    This module has no configuration options, but the enum is required
+    by the AirQualityModule base class for type safety.
+
+    Attributes
+    ----------
+    (No configuration options for this simple module)
+    """
+
+    pass
+
+
+class RowCountMetadata(Enum):
+    """Metadata keys for RowCountModule.
+
+    Attributes
+    ----------
+    SITE_NAME : str
+        Optional human-readable site name.
+    ANALYSIS_PURPOSE : str
+        Optional description of analysis purpose.
+    """
+
+    SITE_NAME = "site_name"
+    ANALYSIS_PURPOSE = "analysis_purpose"
+
+
+class RowCountResult(Enum):
+    """Result keys for RowCountModule.
+
+    Attributes
+    ----------
+    ROW_COUNT : str
+        Total number of rows in the dataset.
+    QC_ZERO_ROWS : str
+        QC flag indicating whether zero rows were detected.
+    """
+
+    ROW_COUNT = "row_count"
+    QC_ZERO_ROWS = "qc_zero_rows"
+
+
 class RowCountModule(AirQualityModule):
     """Dummy module that counts rows in a dataset.
 
     This is a minimal example module for testing the AirQualityModule
     base class and lifecycle. It demonstrates:
     - Required columns specification
+    - ConfigKey and MetadataKey enum definitions
     - Dataset construction from mapping
     - Simple computation logic
     - QC flag generation
@@ -60,22 +117,29 @@ class RowCountModule(AirQualityModule):
     --------
     >>> import pandas as pd
     >>> from air_quality.modules import RowCountModule
+    >>> from air_quality.modules.row_count import RowCountMetadata
     >>> df = pd.DataFrame({
     ...     'datetime': pd.date_range('2024-01-01', periods=10, freq='h'),
     ...     'site_id': ['A'] * 10,
     ...     'pollutant': ['PM2.5'] * 10,
     ...     'conc': range(10)
     ... })
-    >>> module = RowCountModule.from_dataframe(df)
+    >>> metadata = {RowCountMetadata.SITE_NAME: "Downtown Station"}
+    >>> module = RowCountModule.from_dataframe(df, metadata=metadata)
     >>> module.run()
     >>> module.results['row_count']
     10
     """
 
     # Class invariants (required by AirQualityModule)
-    MODULE_NAME = "row_count"
-    DOMAIN = "qc"
-    OUTPUT_SCHEMA_VERSION = "1.0.0"
+    MODULE_NAME = RowCountModuleName.VALUE
+    DOMAIN = ModuleDomain.QC
+    OUTPUT_SCHEMA_VERSION = RowCountSchemaVersion.V1_0_0
+
+    # Enum types for type-safe config, metadata, and results
+    ConfigKey = RowCountConfig
+    MetadataKey = RowCountMetadata
+    ResultKey = RowCountResult
 
     @classmethod
     def _get_required_columns_static(cls) -> Dict[str, list[str]]:
@@ -119,8 +183,14 @@ class RowCountModule(AirQualityModule):
         if mapping_result.mapping:
             dataset_metadata["mapping"] = mapping_result.mapping
 
+        # TimeSeriesDataset requires pandas DataFrame
+        # If mapping result is Polars, convert to pandas
+        df_for_dataset = mapping_result.df_mapped
+        if hasattr(df_for_dataset, "to_pandas"):  # Polars DataFrame
+            df_for_dataset = df_for_dataset.to_pandas()
+
         return TimeSeriesDataset.from_dataframe(
-            mapping_result.df_mapped,
+            df_for_dataset,
             metadata=dataset_metadata,
             mapping=mapping_result.mapping,
             time_index_name="datetime",
@@ -160,7 +230,7 @@ class RowCountModule(AirQualityModule):
         """Count total rows in dataset."""
         # Use dataset property (triggers LazyFrame collection)
         row_count = self.dataset.n_rows
-        self.results["row_count"] = row_count
+        self.results[RowCountResult.ROW_COUNT] = row_count
         self.logger.info(f"Counted {row_count} rows")
 
     def _qc_check(self) -> None:
@@ -169,10 +239,10 @@ class RowCountModule(AirQualityModule):
         This should never detect zero rows since BaseDataset validates
         non-empty during construction. Included for demonstration.
         """
-        row_count = self.results.get("row_count", self.dataset.n_rows)
+        row_count = self.results.get(RowCountResult.ROW_COUNT, self.dataset.n_rows)
         qc_zero_rows = row_count == 0
 
-        self.results["qc_zero_rows"] = qc_zero_rows
+        self.results[RowCountResult.QC_ZERO_ROWS] = qc_zero_rows
 
         if qc_zero_rows:
             self.logger.warning("QC flag: Zero rows detected (should never happen)")
@@ -185,10 +255,10 @@ class RowCountModule(AirQualityModule):
         Add additional QC flag if needed.
         """
         # Ensure both operations ran
-        if "row_count" not in self.results:
+        if RowCountResult.ROW_COUNT not in self.results:
             self._count_rows()
 
-        if "qc_zero_rows" not in self.results:
+        if RowCountResult.QC_ZERO_ROWS not in self.results:
             self._qc_check()
 
     def _build_dashboard_report_impl(self) -> Dict[str, Any]:
@@ -200,8 +270,8 @@ class RowCountModule(AirQualityModule):
             Metrics including row_count and qc flags.
         """
         return {
-            "row_count": self.results["row_count"],
-            "qc_zero_rows": self.results["qc_zero_rows"],
+            "row_count": self.results[RowCountResult.ROW_COUNT],
+            "qc_zero_rows": self.results[RowCountResult.QC_ZERO_ROWS],
         }
 
     def _build_cli_report_impl(self) -> str:
@@ -214,11 +284,11 @@ class RowCountModule(AirQualityModule):
         """
         lines = []
         lines.append("Row Count Analysis:")
-        lines.append(f"  Total Rows: {self.results['row_count']}")
+        lines.append(f"  Total Rows: {self.results[RowCountResult.ROW_COUNT]}")
         lines.append("")
         lines.append("Quality Control:")
 
-        if self.results["qc_zero_rows"]:
+        if self.results[RowCountResult.QC_ZERO_ROWS]:
             lines.append("  ⚠ WARNING: Zero rows detected")
         else:
             lines.append("  ✓ PASS: Dataset contains rows")

@@ -12,16 +12,18 @@ On failure:
 - Ambiguous matches -> SchemaError with candidates listed per field
 
 This utility performs only column-level operations (no row-wise loops).
+Supports both pandas and Polars DataFrames for Constitution Section 11 compliance.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Mapping, Sequence, Tuple
+from typing import Dict, List, Mapping, Sequence, Tuple, Union
 
 import pandas as pd
+import polars as pl
 
-from .exceptions import SchemaError
+from .exceptions import InputValidationError, SchemaError
 
 
 @dataclass(slots=True)
@@ -30,8 +32,9 @@ class ColumnMappingResult:
 
     Attributes
     ----------
-    df_mapped: pd.DataFrame
+    df_mapped: pd.DataFrame | pl.DataFrame
         A DataFrame with canonical column names mapped from the input.
+        Type matches input (pandas → pandas, Polars → Polars).
     mapping: Dict[str, str]
         Mapping from canonical column name -> original input column name.
     diagnostics: List[str]
@@ -40,7 +43,7 @@ class ColumnMappingResult:
         For each canonical field, the candidate input columns considered (for debugging/reporting).
     """
 
-    df_mapped: pd.DataFrame
+    df_mapped: Union[pd.DataFrame, pl.DataFrame]
     mapping: Dict[str, str]
     diagnostics: List[str]
     candidates: Dict[str, List[str]]
@@ -49,7 +52,7 @@ class ColumnMappingResult:
 class ColumnMapper:
     @staticmethod
     def map(
-        df: pd.DataFrame,
+        df: Union[pd.DataFrame, pl.DataFrame],
         *,
         required: Sequence[str],
         synonyms: Mapping[str, Sequence[str]] | None = None,
@@ -58,9 +61,12 @@ class ColumnMapper:
     ) -> ColumnMappingResult:
         """Map user-provided DataFrame columns into a canonical schema.
 
+        Supports both pandas and Polars DataFrames.
+        Constitution Section 11: Columnar operations only.
+
         Parameters
         ----------
-        df: pd.DataFrame
+        df: pd.DataFrame | pl.DataFrame
             Input data with arbitrary column names.
         required: Sequence[str]
             Canonical column names that must be present after mapping.
@@ -75,18 +81,30 @@ class ColumnMapper:
         Returns
         -------
         ColumnMappingResult
+            Result with mapped DataFrame (same type as input), mapping dict, and diagnostics.
 
         Raises
         ------
         SchemaError
             If required fields are missing or ambiguous.
+        InputValidationError
+            If df is not a pandas or Polars DataFrame.
         """
 
         synonyms = synonyms or {}
         explicit = explicit or {}
 
+        # Get column list based on DataFrame type
+        if isinstance(df, pd.DataFrame):
+            original_cols: List[str] = list(df.columns)
+        elif isinstance(df, pl.DataFrame):
+            original_cols = list(df.columns)
+        else:
+            raise InputValidationError(
+                f"Expected pd.DataFrame or pl.DataFrame, got {type(df).__name__}"
+            )
+
         # Normalize input columns for case-insensitive matching
-        original_cols: List[str] = list(df.columns)
         norm_to_original: Dict[str, str] = {c.lower(): c for c in original_cols}
 
         diagnostics: List[str] = []
@@ -95,7 +113,7 @@ class ColumnMapper:
 
         # 1) Apply explicit mapping where provided
         for canon, orig in explicit.items():
-            if orig not in df.columns:
+            if orig not in original_cols:
                 raise SchemaError(
                     f"Explicit mapping refers to missing column: {orig} for {canon}"
                 )
@@ -163,7 +181,19 @@ class ColumnMapper:
 
         # Construct mapped DataFrame with canonical names
         # Note: This selects columns; pandas may copy views internally, but no row-wise ops are performed.
-        mapped_df = pd.DataFrame({canon: df[orig] for canon, orig in mapping.items()})
+        # Preserve the input DataFrame type (pandas or Polars)
+        if isinstance(df, pd.DataFrame):
+            mapped_df: Union[pd.DataFrame, pl.DataFrame] = pd.DataFrame(
+                {canon: df[orig] for canon, orig in mapping.items()}
+            )
+        elif isinstance(df, pl.DataFrame):  # Polars DataFrame
+            mapped_df = df.select(
+                [pl.col(orig).alias(canon) for canon, orig in mapping.items()]
+            )
+        else:
+            raise InputValidationError(
+                f"Expected pd.DataFrame or pl.DataFrame, got {type(df).__name__}"
+            )
 
         return ColumnMappingResult(
             df_mapped=mapped_df,
