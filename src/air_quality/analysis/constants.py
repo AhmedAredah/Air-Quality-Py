@@ -1,4 +1,4 @@
-"""air_quality.stats_analysis.core.constants
+"""air_quality.analysis.constants
 
 Constants for statistical analysis modules.
 
@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from ....units import TimeUnit
+from ..units import TimeUnit
 
 
 class CorrelationMethod(str, Enum):
