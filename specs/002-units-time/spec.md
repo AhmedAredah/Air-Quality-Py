@@ -35,6 +35,7 @@ Provide a minimal, deterministic, Enum-based foundation for handling measurement
 - Q: What rounding policy granularity should we adopt? → A: Per-unit defaults with optional per-pollutant overrides (centralized registry).
 - Q: How should invalid dataset-level unit metadata be handled? → A: Fail fast at construction with UnitError including offending column name.
 - Q: Which backend should power resampling utilities? → A: Use pandas at boundary functions (pandas resample) while keeping Polars as internal columnar core.
+- Q: What is the initial scope of supported units? → A: Minimal concentration units only (ug/m3, mg/m3, ppm, ppb); allow additive extensions later via registry updates.
 
 ## 2. Goals
 
@@ -95,6 +96,7 @@ Constitution references: Sections 9 (API & errors), 11 (performance), 15 (units 
 - FR-U07: Implement `validate_units_schema(mapping: dict[str, Unit | str]) -> dict[str, Unit]` returning normalized mapping or raising `UnitError` with column name context.
 - FR-U08: All public unit API functions must be type annotated with no implicit Any.
 - FR-U09: Provide a centralized rounding policy registry (read-only at runtime) that defines per-unit defaults and optional per-pollutant overrides; documented and testable.
+- FR-U10: The initial supported unit set is limited to UG_M3, MG_M3, PPM, PPB. Extensions are additive and require updating the Enum, registry, tests, and documentation; free-form (non-Enum) units are prohibited.
 
 ### Time Utilities
 
@@ -161,6 +163,7 @@ Constitution references: Sections 8 (reporting), 15 (provenance/units).
 - EC7: Invalid unit key in `column_units` metadata raises `UnitError` with column name.
 - EC8: If a pollutant-specific rounding override is defined, it supersedes the unit default.
 - EC9: Resample functions do not alter original DataFrame (identity of non-time columns preserved; object equality by reference allowed to differ).
+- EC10: Parsing an unknown unit string raises UnitError (explicitly tested).
 
 ## 9. Acceptance Criteria
 
@@ -173,6 +176,7 @@ Constitution references: Sections 8 (reporting), 15 (provenance/units).
 - AC7: Rounding policy registry covered by tests showing per-unit default and pollutant override precedence.
 - AC8: Dataset unit metadata validation tests assert UnitError message contains offending column name.
 - AC9: Resample immutability test confirms original DataFrame unchanged and function returns a new object.
+- AC10: Unit parse/validation tests confirm only UG_M3, MG_M3, PPM, PPB are accepted initially; unknowns raise UnitError; no string passthrough allowed.
 
 Constitution Check Gate: Implementation MAY NOT proceed until this spec passes a Constitution Check confirming adherence to Sections 3, 7, 8, 9, 10, 11, and 15.
 
