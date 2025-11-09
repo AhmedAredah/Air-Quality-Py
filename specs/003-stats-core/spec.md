@@ -5,6 +5,12 @@
 **Status**: Draft  
 **Input**: User description: "Design and implement Feature 003: Core Statistical Analysis (Descriptive, Correlation, Trends) for the air_quality library."
 
+## Clarifications
+
+### Session 2025-11-09
+
+- Q: Define allowed `time_unit` values and precise semantics for Trend primitives (calendar-aware vs fixed averages)? → A: Option B — hour, day, calendar_month, calendar_year with calendar-aware boundaries, and allow future expansion.
+
 ## User Scenarios & Testing *(mandatory)*
 
 <!--
@@ -87,7 +93,14 @@ As an analyst, I want simple linear trends (value ~ time) for pollutants by grou
 
 - **FR-001 (Core/Descriptive)**: Provide a columnar primitive that computes mean, median, std, min, max, quantiles (5th, 25th, 75th, 95th), count, valid count, and missing count for pollutant `conc` values in canonical long datasets, grouped by `pollutant` and optional grouping columns.
 - **FR-002 (Core/Correlation)**: Provide a primitive that computes pairwise correlations across pollutants by pivoting canonical long data to a temporary wide shape per group; method in {"pearson", "spearman"}; return one row per ordered pair `(var_x <= var_y)` with `correlation` and `n`; support optional grouping.
-- **FR-003 (Core/Trend)**: Provide a primitive that fits `conc ~ time` (canonical long) using closed-form expressions over a chosen `time_unit` in a validated set (e.g., day, month, year), returning `slope`, `intercept`, `n`, and reserved diagnostics fields; grouped by `pollutant` and optional grouping columns.
+- **FR-003 (Core/Trend)**: Provide a primitive that fits `conc ~ time` (canonical long) using closed-form expressions over a chosen `time_unit` in the validated set {`hour`, `day`, `calendar_month`, `calendar_year`} with calendar-aware semantics, returning `slope`, `intercept`, `n`, and reserved diagnostics fields; grouped by `pollutant` and optional grouping columns. Future units may be added without breaking changes.
+
+  - Time-unit semantics (calendar-aware):
+    - `hour`: exact elapsed hours between timestamps (UTC-based, 3600s per hour).
+    - `day`: exact elapsed days between timestamps using 24-hour days (UTC-based).
+    - `calendar_month`: elapsed months since a reference computed as integer month differences (year*12+month) plus fractional month = days_elapsed_in_current_month / days_in_current_month.
+    - `calendar_year`: elapsed years since a reference computed as integer year differences plus fractional year = days_elapsed_in_current_year / days_in_current_year (365 or 366).
+    - All calculations use UTC-naive timestamps per Constitution Section 3; timezone handling remains explicit via dataset metadata.
 - **FR-004 (Validation)**: Core primitives MUST validate that all provided value columns are numeric (or safely typed as numeric) and raise `DataValidationError` otherwise; unsupported correlation methods → `ConfigurationError`.
 - **FR-005 (QC/Flags)**: All statistical computations MUST exclude rows flagged as `invalid`/`outlier`; rows flagged `below_dl` are treated as missing (no imputation). Counts MUST include `n_total`, `n_valid`, `n_missing` with category definitions documented.
 - **FR-006 (Modules)**: Implement `DescriptiveStatsModule`, `CorrelationModule`, and `TrendModule` inheriting from `AirQualityModule`, delegating heavy computations to core primitives and using `TimeSeriesDataset` + mapping + units/time utilities.
