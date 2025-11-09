@@ -12,6 +12,7 @@
 - Q: Define allowed `time_unit` values and precise semantics for Trend primitives (calendar-aware vs fixed averages)? → A: hour, day, calendar_month, calendar_year with calendar-aware boundaries, and allow future expansion.
 - Q: What is the default `min_samples` for correlation/trend, and is it configurable? → A: default 5, configurable via module config; core returns true n, modules flag `low_n` when `n < min_samples`.
 - Q: Correlation unit requirements (enforce known units vs flexibility) and override behavior? → A: Require known units metadata by default; allow config override to proceed when units are missing (`allow_missing_units=True`); permit mixed unit families without conversion; always record units presence and override flag in provenance.
+- Q: Minimum duration threshold for TrendModule? → A: 1 year default (calendar_year difference ≥ 1), configurable via `min_duration_years` (can be lowered explicitly); slopes flagged `short_duration` when duration < configured threshold.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -114,6 +115,7 @@ As an analyst, I want simple linear trends (value ~ time) for pollutants by grou
 - **FR-010 (Reproducibility)**: Given identical inputs/configs, results MUST be deterministic within documented numeric tolerances.
  - **FR-011 (Thresholds/min_samples)**: Default `min_samples = 3` for CorrelationModule and TrendModule; configurable via module config. Core primitives NEVER drop results solely due to low sample size; modules apply `low_n` flags and CLI warnings when `n < min_samples`.
  - **FR-012 (Correlation Units Override)**: CorrelationModule requires known unit metadata for all selected pollutant concentration columns by default; mixed unit families permitted without conversion. A config flag (`allow_missing_units=True`) allows operation when units are partially or wholly missing; in such cases module records override in provenance (fields: `units_status`, list of columns missing units) and emits a CLI warning. Missing units without override raise `UnitError`.
+ - **FR-013 (Trend Minimum Duration)**: TrendModule enforces default minimum duration of 1 calendar year between earliest and latest timestamp (calendar-aware). Configurable via `min_duration_years`. If actual duration < threshold, trend still computed but result row includes `short_duration_flag=True` and CLI warning; provenance records actual duration and threshold.
 
 ### Key Entities *(include if feature involves data)*
 
