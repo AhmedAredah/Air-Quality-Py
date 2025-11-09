@@ -26,7 +26,7 @@ As an analyst, I want descriptive statistics (mean, median, std, min, max, quant
 
 **Why this priority**: Descriptives are foundational and reused in compliance, AQI, EJ, and QC workflows.
 
-**Independent Test**: Provide a small canonical time-series DataFrame (with `datetime`, `site_id`, pollutant columns, and `flag`) and verify the module returns a tidy/long table with one row per group × variable × stat, excluding flagged rows and reporting counts.
+**Independent Test**: Provide a small canonical time-series DataFrame in long format (with `datetime`, `site_id`, `pollutant`/`species_id`, `conc`, optional `unc`, and `flag`) and verify the module returns a tidy/long table with one row per group × pollutant × stat, excluding flagged rows and reporting counts.
 
 **Acceptance Scenarios**:
 
@@ -41,7 +41,7 @@ As an analyst, I want pairwise correlations (Pearson and Spearman) between pollu
 
 **Why this priority**: Correlations inform multi-pollutant analysis, source apportionment interpretation, and QC anomaly detection.
 
-**Independent Test**: Provide a canonical dataset with two numeric pollutant columns and known correlation; verify returned LazyFrame has one row per pair (including diagonal), includes `n`, and respects grouping.
+**Independent Test**: Provide a canonical long dataset; module pivots to a temporary wide shape per group to compute pairwise correlations across pollutants. Verify output has one row per pair (including diagonal), includes `n`, and respects grouping.
 
 **Acceptance Scenarios**:
 
@@ -73,7 +73,7 @@ As an analyst, I want simple linear trends (value ~ time) for pollutants by grou
 - Mixed units or missing unit metadata for requested pollutant trends → raise `UnitError`.
 - Very small sample sizes (`n < min_samples`) → primitives still return values with true `n`; modules flag as `low_n` without raising.
 - Duplicated pairs in correlation → enforce single ordered pair `(var_x <= var_y)` including diagonals.
-- Flagged/invalid rows present → excluded from computations; counts reflect exclusions.
+- Flagged rows (`invalid`, `outlier`) → excluded from computations; counts reflect exclusions. Rows flagged `below_dl` are treated as missing for this feature (no imputation), counted in `n_missing`.
 - No grouping columns provided → global aggregation behaves consistently and returns expected schema.
 
 ## Requirements *(mandatory)*
@@ -85,22 +85,22 @@ As an analyst, I want simple linear trends (value ~ time) for pollutants by grou
 
 ### Functional Requirements
 
-- **FR-001 (Core/Descriptive)**: Provide a columnar primitive that computes mean, median, std, min, max, quantiles (5th, 25th, 75th, 95th), count, valid count, and missing count for one or more numeric value columns, with optional grouping.
-- **FR-002 (Core/Correlation)**: Provide a primitive that computes pairwise correlations for a list of numeric columns with method in {"pearson", "spearman"}, returning one row per ordered pair `(var_x <= var_y)` with `correlation` and `n`; support optional grouping.
-- **FR-003 (Core/Trend)**: Provide a primitive that fits `value ~ time` using closed-form expressions over a chosen `time_unit` in a validated set (e.g., day, month, year), returning `slope`, `intercept`, `n`, and reserved diagnostics fields; support optional grouping.
+- **FR-001 (Core/Descriptive)**: Provide a columnar primitive that computes mean, median, std, min, max, quantiles (5th, 25th, 75th, 95th), count, valid count, and missing count for pollutant `conc` values in canonical long datasets, grouped by `pollutant` and optional grouping columns.
+- **FR-002 (Core/Correlation)**: Provide a primitive that computes pairwise correlations across pollutants by pivoting canonical long data to a temporary wide shape per group; method in {"pearson", "spearman"}; return one row per ordered pair `(var_x <= var_y)` with `correlation` and `n`; support optional grouping.
+- **FR-003 (Core/Trend)**: Provide a primitive that fits `conc ~ time` (canonical long) using closed-form expressions over a chosen `time_unit` in a validated set (e.g., day, month, year), returning `slope`, `intercept`, `n`, and reserved diagnostics fields; grouped by `pollutant` and optional grouping columns.
 - **FR-004 (Validation)**: Core primitives MUST validate that all provided value columns are numeric (or safely typed as numeric) and raise `DataValidationError` otherwise; unsupported correlation methods → `ConfigurationError`.
-- **FR-005 (QC/Flags)**: All statistical computations MUST exclude rows flagged as invalid/outliers per standardized canonical `flag` semantics from dataset metadata; counts MUST include `n_total`, `n_valid`, `n_missing`.
+- **FR-005 (QC/Flags)**: All statistical computations MUST exclude rows flagged as `invalid`/`outlier`; rows flagged `below_dl` are treated as missing (no imputation). Counts MUST include `n_total`, `n_valid`, `n_missing` with category definitions documented.
 - **FR-006 (Modules)**: Implement `DescriptiveStatsModule`, `CorrelationModule`, and `TrendModule` inheriting from `AirQualityModule`, delegating heavy computations to core primitives and using `TimeSeriesDataset` + mapping + units/time utilities.
 - **FR-007 (Units & Time)**: Trends MUST enforce units presence for target columns; slopes reported as `{Unit} per {time_unit}` using documented definitions; time bounds reported via `time_utils`.
 - **FR-008 (Reporting)**: Modules MUST output both dashboard payloads and CLI summaries containing metrics, counts, provenance, and clear notes for low sample sizes and QC filtering.
-- **FR-009 (Performance)**: All primitives MUST be expressible with Polars LazyFrame/groupby/expression operations with no Python row loops; include at least one 100k-row smoke/perf test per primitive.
+- **FR-009 (Performance)**: All primitives MUST be expressible with columnar group-by/aggregation expressions (vectorized; no Python row loops); include at least one 100k-row smoke/perf test per primitive.
 - **FR-010 (Reproducibility)**: Given identical inputs/configs, results MUST be deterministic within documented numeric tolerances.
 
 ### Key Entities *(include if feature involves data)*
 
-- **StatisticResult (tidy row)**: `{group_cols...}, variable, stat, value, n_total, n_valid, n_missing`.
-- **CorrelationResult (tidy row)**: `{group_cols...}, var_x, var_y, method, correlation, n, p_value (opt), ci_lower (opt), ci_upper (opt)`.
-- **TrendResult (tidy row)**: `{group_cols...}, variable, time_unit, slope, intercept, n, r2 (opt), p_value (opt), slope_se (opt), ci_lower (opt), ci_upper (opt), resid_var (opt)`.
+- **StatisticResult (tidy row)**: `{group_cols...}, pollutant, stat, value, n_total, n_valid, n_missing`.
+- **CorrelationResult (tidy row)**: `{group_cols...}, var_x (pollutant), var_y (pollutant), method, correlation, n, p_value (opt), ci_lower (opt), ci_upper (opt)`.
+- **TrendResult (tidy row)**: `{group_cols...}, pollutant, time_unit, slope, intercept, n, r2 (opt), p_value (opt), slope_se (opt), ci_lower (opt), ci_upper (opt), resid_var (opt)`.
 
 ## Success Criteria *(mandatory)*
 
@@ -123,8 +123,8 @@ As an analyst, I want simple linear trends (value ~ time) for pollutants by grou
 1. Inheritance & Interface: All new analysis classes (`DescriptiveStatsModule`, `CorrelationModule`, `TrendModule`) inherit `AirQualityModule` and implement required hooks (`_run_impl`, reporting builders, validations). No extra public execution methods beyond the standard interface.
 2. Column Mapping: Modules accept pandas inputs via `from_dataframe()` and use the shared `ColumnMapper` to canonicalize columns (e.g., `datetime`, `site_id`, pollutant columns). Strict validation errors on unresolved required fields (`SchemaError`). Mapping metadata preserved in dataset metadata.
 3. Units & Provenance: Trends require `Unit` metadata per pollutant; errors via `UnitError` if missing/inconsistent. No implicit conversion; any conversion uses `air_quality.units` and is recorded. Provenance records include module, domain, config hash, selected pollutants, grouping, methods, thresholds, and time bounds.
-4. Performance & Scalability: Core primitives operate on Polars LazyFrame with vectorized expressions/groupbys only; no Python row loops. Large datasets (10^5–10^6+ rows) are default; avoid unnecessary materialization; provide 100k-row perf smoke tests.
-5. Reporting: Dashboard payloads include module/domain/schema_version/provenance/metrics. CLI reports summarize inputs, QC filtering, key results, and time bounds. Placeholders for uncertainty/diagnostics included in correlation/trend outputs.
+4. Performance & Scalability: Core primitives operate on a columnar backend with vectorized expressions/groupbys only (e.g., Arrow/Polars); no Python row loops. Large datasets (10^5–10^6+ rows) are default; avoid unnecessary materialization; provide 100k-row perf smoke tests.
+5. Reporting: Dashboard payloads include module/domain/schema_version/provenance/metrics/counts. CLI reports summarize inputs, QC filtering (including `below_dl` treatment), key results, and time bounds. Placeholders for uncertainty/diagnostics included in correlation/trend outputs.
 6. Testing & Benchmarks: Add regression tests for correctness (including grouped cases), QC filtering, and performance smoke tests. Ensure mypy strictness for new files and maintain existing test pass status.
 7. EJ/Health/Ethics: No new sensitive fields introduced. Modules must avoid cherry‑picking and clearly separate statistical summaries from health/compliance claims; privacy safeguards N/A for this core feature.
 8. DRY & Shared Utilities: All heavy logic in `air_quality.stats_analysis.core`; modules are thin orchestrators. Reuse shared logging, mapping, units, provenance, and time utilities; no duplicated statistical code.
