@@ -24,3 +24,8 @@ dev = [
     "pyarrow-stubs>=20.0.0.20251107",
     "pytest>=9.0.0",
 ]
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests as slow (deselect with '-k \"not slow\"')",
+]
