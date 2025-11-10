@@ -61,20 +61,20 @@ Goal: Provide descriptive statistics per pollutant and grouping keys with QC-awa
 Independent Test: Run `DescriptiveStatsModule` on small canonical long dataset and assert tidy output rows for each stat with correct counts.
 
 ### Tests (write first)
-- [ ] T019 [P] [US1] Unit test: basic single-site stats in `tests/unit/statistics/test_descriptive_basic.py`
-- [ ] T020 [P] [US1] Unit test: grouping by site_id multi-pollutant in `tests/unit/statistics/test_descriptive_grouped.py`
-- [ ] T021 [P] [US1] Unit test: flag filtering & counts in `tests/unit/statistics/test_descriptive_flags.py`
-- [ ] T022 [US1] Integration test module CLI report in `tests/integration/modules/test_descriptive_module_cli.py`
+- [X] T019 [P] [US1] Unit test: basic single-site stats in `tests/unit/statistics/test_descriptive_basic.py`
+- [X] T020 [P] [US1] Unit test: grouping by site_id multi-pollutant in `tests/unit/statistics/test_descriptive_grouped.py`
+- [X] T021 [P] [US1] Unit test: flag filtering & counts in `tests/unit/statistics/test_descriptive_flags.py`
+- [X] T022 [US1] Integration test module CLI report in `tests/integration/modules/test_descriptive_module_cli.py`
 
 ### Implementation
-- [ ] T023 Implement quantile/stat aggregation logic in `src/air_quality/analysis/descriptive.py`
-- [ ] T024 [P] Implement descriptive primitive function `compute_descriptives` (Polars) in same file
-- [ ] T025 [P] Implement fallback Pandas path (if needed) in same file with explanatory docstring
-- [ ] T026 Implement `DescriptiveStatsModule` `_run_impl` in `src/air_quality/modules/statistics/descriptive.py`
-- [ ] T027 Implement dashboard report builder in same module file
-- [ ] T028 Implement CLI report builder in same module file
-- [ ] T029 Add provenance fields (stats list, grouping, n_total/valid/missing schema) using `make_provenance()` from `src/air_quality/provenance.py`
-- [ ] T030 [P] Add mypy type hints & pass mypy for descriptive code
+- [X] T023 Implement quantile/stat aggregation logic in `src/air_quality/analysis/descriptive.py`
+- [X] T024 [P] Implement descriptive primitive function `compute_descriptives` (Polars) in same file
+- [X] T025 [P] Implement fallback Pandas path (if needed) in same file with explanatory docstring
+- [X] T026 Implement `DescriptiveStatsModule` `_run_impl` in `src/air_quality/modules/statistics/descriptive.py`
+- [X] T027 Implement dashboard report builder in same module file
+- [X] T028 Implement CLI report builder in same module file
+- [X] T029 Add provenance fields (stats list, grouping, n_total/valid/missing schema) using `make_provenance()` from `src/air_quality/provenance.py`
+- [X] T030 [P] Add mypy type hints & pass mypy for descriptive code
 - [ ] T031 Add docs example cross-link in `quickstart.md` referencing new module
 
 Checkpoint: US1 independently functional & testable.

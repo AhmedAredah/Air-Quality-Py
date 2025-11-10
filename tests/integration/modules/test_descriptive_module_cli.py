@@ -55,8 +55,8 @@ class TestDescriptiveStatsModuleIntegration:
         assert module.results is not None
         assert len(module.results) > 0
 
-    def test_module_run_returns_results_dict(self, sample_dataframe):
-        """Test that run() returns results dictionary."""
+    def test_module_run_returns_self(self, sample_dataframe):
+        """Test that run() returns self for method chaining."""
         module = DescriptiveStatsModule.from_dataframe(
             sample_dataframe,
             config={},
@@ -64,8 +64,10 @@ class TestDescriptiveStatsModuleIntegration:
 
         result = module.run()
 
-        # Result should be a dict with enum keys
-        assert isinstance(result, dict)
+        # Result should be the module itself (for method chaining)
+        assert result is module
+        # But module.results should be a dict with enum keys
+        assert isinstance(module.results, dict)
 
     def test_report_dashboard_structure(self, sample_dataframe):
         """Test dashboard report structure."""
