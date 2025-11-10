@@ -75,7 +75,7 @@ Independent Test: Run `DescriptiveStatsModule` on small canonical long dataset a
 - [X] T028 Implement CLI report builder in same module file
 - [X] T029 Add provenance fields (stats list, grouping, n_total/valid/missing schema) using `make_provenance()` from `src/air_quality/provenance.py`
 - [X] T030 [P] Add mypy type hints & pass mypy for descriptive code
-- [ ] T031 Add docs example cross-link in `quickstart.md` referencing new module
+- [X] T031 Add docs example cross-link in `quickstart.md` referencing new module
 
 Checkpoint: US1 independently functional & testable.
 
