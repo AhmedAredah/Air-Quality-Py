@@ -1,4 +1,4 @@
-"""air_quality.stats_analysis.core.descriptive
+"""air_quality.analysis.descriptive
 
 Descriptive statistics primitives (mean, median, std, quantiles, counts).
 
@@ -9,7 +9,64 @@ Constitution compliance:
 
 from __future__ import annotations
 
-from .constants import DEFAULT_QUANTILES
+from enum import Enum
+
+
+class StatisticType(str, Enum):
+    """Descriptive statistics computed by the descriptive module.
+
+    Constitution References
+    -----------------------
+    - Section 7: Module output standards
+
+    Statistics:
+    - MEAN: Arithmetic mean
+    - MEDIAN: 50th percentile
+    - STD: Standard deviation
+    - MIN: Minimum value
+    - MAX: Maximum value
+    - Q05: 5th percentile
+    - Q25: 25th percentile (first quartile)
+    - Q75: 75th percentile (third quartile)
+    - Q95: 95th percentile
+    """
+
+    MEAN = "mean"
+    MEDIAN = "median"
+    STD = "std"
+    MIN = "min"
+    MAX = "max"
+    Q05 = "q05"
+    Q25 = "q25"
+    Q75 = "q75"
+    Q95 = "q95"
+
+
+# Quantile levels for descriptive statistics
+DEFAULT_QUANTILES: tuple[float, ...] = (0.05, 0.25, 0.75, 0.95)
+"""Default quantile levels: 5th, 25th, 75th, 95th percentiles."""
+
+# Statistics computed by descriptive module
+DESCRIPTIVE_STATS: tuple[StatisticType, ...] = (
+    StatisticType.MEAN,
+    StatisticType.MEDIAN,
+    StatisticType.STD,
+    StatisticType.MIN,
+    StatisticType.MAX,
+    StatisticType.Q05,
+    StatisticType.Q25,
+    StatisticType.Q75,
+    StatisticType.Q95,
+)
+"""Standard statistics computed for descriptive summaries."""
+
+
+__all__ = [
+    "StatisticType",
+    "DEFAULT_QUANTILES",
+    "DESCRIPTIVE_STATS",
+    "get_quantile_levels",
+]
 
 
 def get_quantile_levels(
