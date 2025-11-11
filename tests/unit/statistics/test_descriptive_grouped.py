@@ -9,7 +9,7 @@ import pandas as pd
 import polars as pl
 import pytest
 
-from air_quality.analysis.descriptive import compute_descriptives, StatisticType
+from air_quality.analysis.descriptive import compute_descriptives, DescriptiveStatsOperation
 from air_quality.dataset.time_series import TimeSeriesDataset
 from air_quality.qc_flags import QCFlag
 
@@ -64,8 +64,8 @@ class TestGroupedDescriptiveStats:
         result = compute_descriptives(
             dataset=multi_site_dataset,
             group_by=["site_id"],
-            pollutant_col="pollutant",
-            conc_col="conc",
+            category_col="pollutant",
+            value_cols="conc",
             flag_col="flag",
         )
 
@@ -87,8 +87,8 @@ class TestGroupedDescriptiveStats:
         result = compute_descriptives(
             dataset=multi_site_dataset,
             group_by=["site_id"],
-            pollutant_col="pollutant",
-            conc_col="conc",
+            category_col="pollutant",
+            value_cols="conc",
             flag_col="flag",
         )
 
@@ -99,24 +99,24 @@ class TestGroupedDescriptiveStats:
         # Check S1 statistics (values 1-10)
         s1_rows = result[result["site_id"] == "S1"]
         s1_stats = dict(zip(s1_rows["stat"], s1_rows["value"]))
-        assert s1_stats[StatisticType.MEAN.value] == pytest.approx(5.5)
-        assert s1_stats[StatisticType.MIN.value] == pytest.approx(1.0)
-        assert s1_stats[StatisticType.MAX.value] == pytest.approx(10.0)
+        assert s1_stats[DescriptiveStatsOperation.MEAN.value] == pytest.approx(5.5)
+        assert s1_stats[DescriptiveStatsOperation.MIN.value] == pytest.approx(1.0)
+        assert s1_stats[DescriptiveStatsOperation.MAX.value] == pytest.approx(10.0)
 
         # Check S2 statistics (values 11-20)
         s2_rows = result[result["site_id"] == "S2"]
         s2_stats = dict(zip(s2_rows["stat"], s2_rows["value"]))
-        assert s2_stats[StatisticType.MEAN.value] == pytest.approx(15.5)
-        assert s2_stats[StatisticType.MIN.value] == pytest.approx(11.0)
-        assert s2_stats[StatisticType.MAX.value] == pytest.approx(20.0)
+        assert s2_stats[DescriptiveStatsOperation.MEAN.value] == pytest.approx(15.5)
+        assert s2_stats[DescriptiveStatsOperation.MIN.value] == pytest.approx(11.0)
+        assert s2_stats[DescriptiveStatsOperation.MAX.value] == pytest.approx(20.0)
 
     def test_multi_pollutant_no_grouping(self, multi_pollutant_dataset):
         """Test multiple pollutants without additional grouping."""
         result = compute_descriptives(
             dataset=multi_pollutant_dataset,
             group_by=None,
-            pollutant_col="pollutant",
-            conc_col="conc",
+            category_col="pollutant",
+            value_cols="conc",
             flag_col="flag",
         )
 
@@ -138,8 +138,8 @@ class TestGroupedDescriptiveStats:
         result = compute_descriptives(
             dataset=multi_pollutant_dataset,
             group_by=None,
-            pollutant_col="pollutant",
-            conc_col="conc",
+            category_col="pollutant",
+            value_cols="conc",
             flag_col="flag",
         )
 
@@ -150,20 +150,20 @@ class TestGroupedDescriptiveStats:
         # Check PM25 statistics (values 1-10)
         pm25_rows = result[result["pollutant"] == "PM25"]
         pm25_stats = dict(zip(pm25_rows["stat"], pm25_rows["value"]))
-        assert pm25_stats[StatisticType.MEAN.value] == pytest.approx(5.5)
+        assert pm25_stats[DescriptiveStatsOperation.MEAN.value] == pytest.approx(5.5)
 
         # Check NO2 statistics (values 11-20)
         no2_rows = result[result["pollutant"] == "NO2"]
         no2_stats = dict(zip(no2_rows["stat"], no2_rows["value"]))
-        assert no2_stats[StatisticType.MEAN.value] == pytest.approx(15.5)
+        assert no2_stats[DescriptiveStatsOperation.MEAN.value] == pytest.approx(15.5)
 
     def test_group_by_site_multi_pollutant(self, multi_site_multi_pollutant_dataset):
         """Test grouping by site with multiple pollutants."""
         result = compute_descriptives(
             dataset=multi_site_multi_pollutant_dataset,
             group_by=["site_id"],
-            pollutant_col="pollutant",
-            conc_col="conc",
+            category_col="pollutant",
+            value_cols="conc",
             flag_col="flag",
         )
 
@@ -203,8 +203,8 @@ class TestGroupedDescriptiveStats:
         result = compute_descriptives(
             dataset=dataset,
             group_by=["site_id", "region"],
-            pollutant_col="pollutant",
-            conc_col="conc",
+            category_col="pollutant",
+            value_cols="conc",
             flag_col="flag",
         )
 
@@ -224,8 +224,8 @@ class TestGroupedDescriptiveStats:
         result = compute_descriptives(
             dataset=multi_site_dataset,
             group_by=["site_id"],
-            pollutant_col="pollutant",
-            conc_col="conc",
+            category_col="pollutant",
+            value_cols="conc",
             flag_col="flag",
         )
 
@@ -256,8 +256,8 @@ class TestGroupedDescriptiveStats:
         result = compute_descriptives(
             dataset=dataset,
             group_by=["site_id"],
-            pollutant_col="pollutant",
-            conc_col="conc",
+            category_col="pollutant",
+            value_cols="conc",
             flag_col="flag",
         )
 

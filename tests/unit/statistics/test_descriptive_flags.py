@@ -9,7 +9,7 @@ import pandas as pd
 import polars as pl
 import pytest
 
-from air_quality.analysis.descriptive import compute_descriptives, StatisticType
+from air_quality.analysis.descriptive import compute_descriptives, DescriptiveStatsOperation
 from air_quality.dataset.time_series import TimeSeriesDataset
 from air_quality.qc_flags import QCFlag
 
@@ -39,8 +39,8 @@ class TestDescriptiveFlagFiltering:
         result = compute_descriptives(
             dataset=dataset,
             group_by=None,
-            pollutant_col="pollutant",
-            conc_col="conc",
+            category_col="pollutant",
+            value_cols="conc",
             flag_col="flag",
         )
 
@@ -55,7 +55,7 @@ class TestDescriptiveFlagFiltering:
 
         # Mean should exclude the invalid value: (1+2+4+5)/4 = 3.0
         stats_dict = dict(zip(result["stat"], result["value"]))
-        assert stats_dict[StatisticType.MEAN.value] == pytest.approx(3.0)
+        assert stats_dict[DescriptiveStatsOperation.MEAN.value] == pytest.approx(3.0)
 
     def test_exclude_outlier_flag(self):
         """Test that OUTLIER flags are excluded from computation."""
@@ -79,8 +79,8 @@ class TestDescriptiveFlagFiltering:
         result = compute_descriptives(
             dataset=dataset,
             group_by=None,
-            pollutant_col="pollutant",
-            conc_col="conc",
+            category_col="pollutant",
+            value_cols="conc",
             flag_col="flag",
         )
 
@@ -95,7 +95,7 @@ class TestDescriptiveFlagFiltering:
 
         # Mean should exclude the outlier: (1+2+4+5)/4 = 3.0
         stats_dict = dict(zip(result["stat"], result["value"]))
-        assert stats_dict[StatisticType.MEAN.value] == pytest.approx(3.0)
+        assert stats_dict[DescriptiveStatsOperation.MEAN.value] == pytest.approx(3.0)
 
     def test_below_dl_treated_as_missing(self):
         """Test that BELOW_DL flags are treated as missing (excluded but counted)."""
@@ -119,8 +119,8 @@ class TestDescriptiveFlagFiltering:
         result = compute_descriptives(
             dataset=dataset,
             group_by=None,
-            pollutant_col="pollutant",
-            conc_col="conc",
+            category_col="pollutant",
+            value_cols="conc",
             flag_col="flag",
         )
 
@@ -135,7 +135,7 @@ class TestDescriptiveFlagFiltering:
 
         # Mean should exclude below_dl: (1+2+4+5)/4 = 3.0
         stats_dict = dict(zip(result["stat"], result["value"]))
-        assert stats_dict[StatisticType.MEAN.value] == pytest.approx(3.0)
+        assert stats_dict[DescriptiveStatsOperation.MEAN.value] == pytest.approx(3.0)
 
     def test_mixed_flags(self):
         """Test handling of mixed QC flags."""
@@ -164,8 +164,8 @@ class TestDescriptiveFlagFiltering:
         result = compute_descriptives(
             dataset=dataset,
             group_by=None,
-            pollutant_col="pollutant",
-            conc_col="conc",
+            category_col="pollutant",
+            value_cols="conc",
             flag_col="flag",
         )
 
@@ -182,7 +182,7 @@ class TestDescriptiveFlagFiltering:
         # Mean should be (1+2+4+6+8+9+10)/7
         stats_dict = dict(zip(result["stat"], result["value"]))
         expected_mean = (1.0 + 2.0 + 4.0 + 6.0 + 8.0 + 9.0 + 10.0) / 7.0
-        assert stats_dict[StatisticType.MEAN.value] == pytest.approx(expected_mean)
+        assert stats_dict[DescriptiveStatsOperation.MEAN.value] == pytest.approx(expected_mean)
 
     def test_count_consistency(self):
         """Test that n_total = n_valid + n_missing always holds."""
@@ -212,8 +212,8 @@ class TestDescriptiveFlagFiltering:
         result = compute_descriptives(
             dataset=dataset,
             group_by=["site_id"],
-            pollutant_col="pollutant",
-            conc_col="conc",
+            category_col="pollutant",
+            value_cols="conc",
             flag_col="flag",
         )
 
@@ -240,8 +240,8 @@ class TestDescriptiveFlagFiltering:
         result = compute_descriptives(
             dataset=dataset,
             group_by=None,
-            pollutant_col="pollutant",
-            conc_col="conc",
+            category_col="pollutant",
+            value_cols="conc",
             flag_col="flag",  # Will be None/missing in dataset
         )
 
@@ -256,7 +256,7 @@ class TestDescriptiveFlagFiltering:
 
         # Mean should be (1+2+3+4+5)/5 = 3.0
         stats_dict = dict(zip(result["stat"], result["value"]))
-        assert stats_dict[StatisticType.MEAN.value] == pytest.approx(3.0)
+        assert stats_dict[DescriptiveStatsOperation.MEAN.value] == pytest.approx(3.0)
 
     def test_null_flags_treated_as_valid(self):
         """Test that null/None flag values are treated as VALID."""
@@ -280,8 +280,8 @@ class TestDescriptiveFlagFiltering:
         result = compute_descriptives(
             dataset=dataset,
             group_by=None,
-            pollutant_col="pollutant",
-            conc_col="conc",
+            category_col="pollutant",
+            value_cols="conc",
             flag_col="flag",
         )
 
@@ -322,8 +322,8 @@ class TestDescriptiveFlagFiltering:
         result = compute_descriptives(
             dataset=dataset,
             group_by=["site_id"],
-            pollutant_col="pollutant",
-            conc_col="conc",
+            category_col="pollutant",
+            value_cols="conc",
             flag_col="flag",
         )
 
@@ -365,8 +365,8 @@ class TestDescriptiveFlagFiltering:
         result = compute_descriptives(
             dataset=dataset,
             group_by=None,
-            pollutant_col="pollutant",
-            conc_col="conc",
+            category_col="pollutant",
+            value_cols="conc",
             flag_col="flag",
         )
 

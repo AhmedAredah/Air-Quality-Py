@@ -9,7 +9,7 @@ import pandas as pd
 import polars as pl
 import pytest
 
-from air_quality.analysis.descriptive import compute_descriptives, StatisticType
+from air_quality.analysis.descriptive import compute_descriptives, DescriptiveStatsOperation
 from air_quality.dataset.time_series import TimeSeriesDataset
 from air_quality.qc_flags import QCFlag
 
@@ -36,8 +36,8 @@ class TestBasicDescriptiveStats:
         result = compute_descriptives(
             dataset=simple_dataset,
             group_by=None,
-            pollutant_col="pollutant",
-            conc_col="conc",
+            category_col="pollutant",
+            value_cols="conc",
             flag_col="flag",
         )
 
@@ -49,8 +49,8 @@ class TestBasicDescriptiveStats:
         result = compute_descriptives(
             dataset=simple_dataset,
             group_by=None,
-            pollutant_col="pollutant",
-            conc_col="conc",
+            category_col="pollutant",
+            value_cols="conc",
             flag_col="flag",
         )
 
@@ -60,15 +60,15 @@ class TestBasicDescriptiveStats:
 
         # Should have rows for each statistic
         expected_stats = {
-            StatisticType.MEAN.value,
-            StatisticType.MEDIAN.value,
-            StatisticType.STD.value,
-            StatisticType.MIN.value,
-            StatisticType.MAX.value,
-            StatisticType.Q05.value,
-            StatisticType.Q25.value,
-            StatisticType.Q75.value,
-            StatisticType.Q95.value,
+            DescriptiveStatsOperation.MEAN.value,
+            DescriptiveStatsOperation.MEDIAN.value,
+            DescriptiveStatsOperation.STD.value,
+            DescriptiveStatsOperation.MIN.value,
+            DescriptiveStatsOperation.MAX.value,
+            "q05",
+            "q25",
+            "q75",
+            "q95",
         }
         assert set(result["stat"].values) == expected_stats
 
@@ -77,8 +77,8 @@ class TestBasicDescriptiveStats:
         result = compute_descriptives(
             dataset=simple_dataset,
             group_by=None,
-            pollutant_col="pollutant",
-            conc_col="conc",
+            category_col="pollutant",
+            value_cols="conc",
             flag_col="flag",
         )
 
@@ -90,18 +90,18 @@ class TestBasicDescriptiveStats:
         stats_dict = dict(zip(result["stat"], result["value"]))
 
         # Check known statistics for [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-        assert stats_dict[StatisticType.MEAN.value] == pytest.approx(5.5)
-        assert stats_dict[StatisticType.MEDIAN.value] == pytest.approx(5.5)
-        assert stats_dict[StatisticType.MIN.value] == pytest.approx(1.0)
-        assert stats_dict[StatisticType.MAX.value] == pytest.approx(10.0)
+        assert stats_dict[DescriptiveStatsOperation.MEAN.value] == pytest.approx(5.5)
+        assert stats_dict[DescriptiveStatsOperation.MEDIAN.value] == pytest.approx(5.5)
+        assert stats_dict[DescriptiveStatsOperation.MIN.value] == pytest.approx(1.0)
+        assert stats_dict[DescriptiveStatsOperation.MAX.value] == pytest.approx(10.0)
 
     def test_compute_descriptives_has_counts(self, simple_dataset):
         """Test that results include n_total, n_valid, n_missing."""
         result = compute_descriptives(
             dataset=simple_dataset,
             group_by=None,
-            pollutant_col="pollutant",
-            conc_col="conc",
+            category_col="pollutant",
+            value_cols="conc",
             flag_col="flag",
         )
 
@@ -124,8 +124,8 @@ class TestBasicDescriptiveStats:
         result = compute_descriptives(
             dataset=simple_dataset,
             group_by=None,
-            pollutant_col="pollutant",
-            conc_col="conc",
+            category_col="pollutant",
+            value_cols="conc",
             flag_col="flag",
         )
 
@@ -142,8 +142,8 @@ class TestBasicDescriptiveStats:
         result = compute_descriptives(
             dataset=simple_dataset,
             group_by=None,
-            pollutant_col="pollutant",
-            conc_col="conc",
+            category_col="pollutant",
+            value_cols="conc",
             flag_col="flag",
         )
 
@@ -176,8 +176,8 @@ class TestBasicDescriptiveStats:
         result = compute_descriptives(
             dataset=dataset,
             group_by=None,
-            pollutant_col="pollutant",
-            conc_col="conc",
+            category_col="pollutant",
+            value_cols="conc",
             flag_col="flag",
         )
 
@@ -192,7 +192,7 @@ class TestBasicDescriptiveStats:
 
         # Mean should be (1+2+4+5)/4 = 3.0
         stats_dict = dict(zip(result["stat"], result["value"]))
-        assert stats_dict[StatisticType.MEAN.value] == pytest.approx(3.0)
+        assert stats_dict[DescriptiveStatsOperation.MEAN.value] == pytest.approx(3.0)
 
     def test_compute_descriptives_excludes_invalid_outlier(self):
         """Test that invalid and outlier flags are excluded from computation."""
@@ -216,8 +216,8 @@ class TestBasicDescriptiveStats:
         result = compute_descriptives(
             dataset=dataset,
             group_by=None,
-            pollutant_col="pollutant",
-            conc_col="conc",
+            category_col="pollutant",
+            value_cols="conc",
             flag_col="flag",
         )
 
@@ -232,7 +232,7 @@ class TestBasicDescriptiveStats:
 
         # Mean should be (1+2+4)/3 = 2.333...
         stats_dict = dict(zip(result["stat"], result["value"]))
-        assert stats_dict[StatisticType.MEAN.value] == pytest.approx(7.0 / 3.0)
+        assert stats_dict[DescriptiveStatsOperation.MEAN.value] == pytest.approx(7.0 / 3.0)
 
     def test_compute_descriptives_empty_after_filtering(self):
         """Test handling when all data is filtered out."""
@@ -254,8 +254,8 @@ class TestBasicDescriptiveStats:
         result = compute_descriptives(
             dataset=dataset,
             group_by=None,
-            pollutant_col="pollutant",
-            conc_col="conc",
+            category_col="pollutant",
+            value_cols="conc",
             flag_col="flag",
         )
 
