@@ -15,7 +15,11 @@ from typing import Any, Dict, Optional, Sequence
 
 import polars as pl
 
-from ...analysis.descriptive import compute_descriptives
+from ...analysis.descriptive import (
+    compute_descriptives,
+    OutputFormat,
+    DescriptiveStatsOperation,
+)
 from ...dataset.base import BaseDataset
 from ...dataset.time_series import TimeSeriesDataset
 from ...exceptions import ConfigurationError
@@ -49,19 +53,22 @@ class DescriptiveStatsConfig(str, Enum):
         Grouping columns (None for global aggregation).
     QUANTILES : str
         Quantile levels to compute.
-    POLLUTANT_COL : str
-        Pollutant identifier column name.
-    CONC_COL : str
-        Concentration value column name.
+    VALUE_COLS : str
+        Numeric value column(s) to analyze (single string or list of strings).
+    CATEGORY_COL : str
+        Categorical column for grouping statistics.
     FLAG_COL : str
         QC flag column name.
+    OUTPUT_FORMAT : str
+        Output format (TIDY or WIDE).
     """
 
     GROUP_BY = "group_by"
     QUANTILES = "quantiles"
-    POLLUTANT_COL = "pollutant_col"
-    CONC_COL = "conc_col"
+    VALUE_COLS = "value_cols"
+    CATEGORY_COL = "category_col"
     FLAG_COL = "flag_col"
+    OUTPUT_FORMAT = "output_format"
 
 
 class DescriptiveStatsMetadata(Enum):
@@ -112,6 +119,16 @@ class DescriptiveStatsModule(AirQualityModule):
     - QC-aware counts (n_total, n_valid, n_missing)
     - Optional grouping by site_id or other dimensions
 
+    Operations
+    ----------
+    - MEAN: Compute mean/average
+    - MEDIAN: Compute median
+    - STD: Compute standard deviation
+    - MIN: Compute minimum value
+    - MAX: Compute maximum value
+    - COUNT: Compute count of valid observations
+    - QUANTILES: Compute quantiles
+
     Constitution compliance:
     - Section 7: Inherits AirQualityModule, implements required hooks
     - Section 8: Dual reporting (dashboard + CLI)
@@ -121,7 +138,11 @@ class DescriptiveStatsModule(AirQualityModule):
     Examples
     --------
     >>> import pandas as pd
-    >>> from air_quality.modules.statistics.descriptive import DescriptiveStatsModule
+    >>> from air_quality.modules.statistics.descriptive import (
+    ...     DescriptiveStatsModule,
+    ...     DescriptiveStatsOperation,
+    ...     DescriptiveStatsResult
+    ... )
     >>> from air_quality.qc_flags import QCFlag
     >>> df = pd.DataFrame({
     ...     'datetime': pd.date_range('2024-01-01', periods=100, freq='h'),
@@ -131,7 +152,9 @@ class DescriptiveStatsModule(AirQualityModule):
     ...     'flag': [QCFlag.VALID.value] * 100
     ... })
     >>> module = DescriptiveStatsModule.from_dataframe(df)
-    >>> module.run()
+    >>> module.run()  # Computes all statistics by default
+    >>> # Or compute specific statistics:
+    >>> module.run(operations=[DescriptiveStatsOperation.MEAN, DescriptiveStatsOperation.STD])
     >>> stats = module.results[DescriptiveStatsResult.STATISTICS]
     >>> print(module.report_cli())
     """
@@ -142,6 +165,7 @@ class DescriptiveStatsModule(AirQualityModule):
     OUTPUT_SCHEMA_VERSION = DescriptiveStatsSchemaVersion.V1_0_0
 
     # Enum types for type-safe config, metadata, and results
+    OperationKey = DescriptiveStatsOperation
     ConfigKey = DescriptiveStatsConfig
     MetadataKey = DescriptiveStatsMetadata
     ResultKey = DescriptiveStatsResult
@@ -172,6 +196,13 @@ class DescriptiveStatsModule(AirQualityModule):
     ) -> BaseDataset:
         """Construct TimeSeriesDataset from mapping result.
 
+        Optimized to use from_polars() when mapping result is already Polars,
+        avoiding unnecessary Polars -> Pandas -> Polars conversions.
+
+        Constitution References
+        -----------------------
+        - Section 11: Performance - avoid unnecessary data conversions
+
         Parameters
         ----------
         mapping_result : ColumnMappingResult
@@ -191,21 +222,31 @@ class DescriptiveStatsModule(AirQualityModule):
         if mapping_result.mapping:
             dataset_metadata["mapping"] = mapping_result.mapping
 
-        # TimeSeriesDataset requires pandas DataFrame
-        # If mapping result is Polars, convert to pandas
         df_for_dataset = mapping_result.df_mapped
-        if hasattr(df_for_dataset, "to_pandas"):  # Polars DataFrame
-            df_for_dataset = df_for_dataset.to_pandas()  # type: ignore[operator]
 
-        # Ensure df_for_dataset is pandas DataFrame for type checker
-        assert isinstance(df_for_dataset, pd.DataFrame)
-
-        return TimeSeriesDataset.from_dataframe(
-            df_for_dataset,
-            metadata=dataset_metadata,
-            mapping=mapping_result.mapping,
-            time_index_name="datetime",
-        )
+        # Use the most efficient construction method based on data type
+        if isinstance(df_for_dataset, (pl.DataFrame, pl.LazyFrame)):
+            # Polars -> use from_polars() directly (zero-copy for LazyFrame)
+            return TimeSeriesDataset.from_polars(
+                df_for_dataset,
+                metadata=dataset_metadata,
+                mapping=mapping_result.mapping,
+                time_index_name="datetime",
+            )
+        elif isinstance(df_for_dataset, pd.DataFrame):
+            # Pandas -> use from_dataframe()
+            return TimeSeriesDataset.from_dataframe(
+                df_for_dataset,
+                metadata=dataset_metadata,
+                mapping=mapping_result.mapping,
+                time_index_name="datetime",
+            )
+        else:
+            # Fallback for other types (shouldn't happen with current ColumnMapper)
+            raise TypeError(
+                f"Unexpected dataframe type: {type(df_for_dataset)}. "
+                f"Expected pandas.DataFrame or polars.DataFrame/LazyFrame"
+            )
 
     def _run_impl(
         self,
@@ -215,28 +256,51 @@ class DescriptiveStatsModule(AirQualityModule):
 
         Parameters
         ----------
-        operations : Sequence[Enum], optional
-            Not used for this module (single operation).
+        operations : Sequence[DescriptiveStatsOperation], optional
+            Specific statistics to compute. If None, computes all statistics.
+            Options: MEAN, MEDIAN, STD, MIN, MAX, COUNT, QUANTILES
         """
-        self.logger.info("Computing descriptive statistics")
+        # Determine which statistics to compute
+        if operations is None:
+            # Compute all statistics by default
+            ops_to_run = list(DescriptiveStatsOperation)
+        else:
+            # Cast to list of DescriptiveStatsOperation for type safety
+            ops_to_run = [DescriptiveStatsOperation(op) for op in operations]
+
+        self.logger.info(f"Computing statistics: {ops_to_run}")
+
+        # Compute the requested statistics
+        self._compute_statistics(stats=ops_to_run)
+
+    def _compute_statistics(self, stats: list[DescriptiveStatsOperation]) -> None:
+        """Compute descriptive statistics for numeric values with optional grouping.
+
+        Parameters
+        ----------
+        stats : list[DescriptiveStatsOperation]
+            List of statistics to compute (e.g., ["mean", "std", "min", "max"]).
+        """
+        self.logger.info(f"Computing descriptive statistics: {stats}")
 
         # Extract configuration
         group_by = self.config.get(DescriptiveStatsConfig.GROUP_BY, None)
-        quantiles = self.config.get(DescriptiveStatsConfig.QUANTILES, None)
-        pollutant_col = self.config.get(
-            DescriptiveStatsConfig.POLLUTANT_COL, "pollutant"
-        )
-        conc_col = self.config.get(DescriptiveStatsConfig.CONC_COL, "conc")
+        value_cols = self.config.get(DescriptiveStatsConfig.VALUE_COLS, "conc")
+        category_col = self.config.get(DescriptiveStatsConfig.CATEGORY_COL, "pollutant")
         flag_col = self.config.get(DescriptiveStatsConfig.FLAG_COL, "flag")
+        output_format = self.config.get(
+            DescriptiveStatsConfig.OUTPUT_FORMAT, OutputFormat.TIDY
+        )
 
         # Compute descriptive statistics
         stats_df = compute_descriptives(
             dataset=self.dataset,
             group_by=group_by,
-            pollutant_col=pollutant_col,
-            conc_col=conc_col,
+            value_cols=value_cols,
+            category_col=category_col,
             flag_col=flag_col,
-            quantiles=quantiles,
+            output_format=output_format,
+            stats=stats,
         )
 
         # Store results
