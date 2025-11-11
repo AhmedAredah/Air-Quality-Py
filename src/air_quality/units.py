@@ -25,6 +25,50 @@ import polars as pl
 from .exceptions import UnitError
 
 
+class TimeUnit(str, Enum):
+    """Time units for trend analysis with calendar-aware semantics.
+
+    Constitution References
+    -----------------------
+    - Section 3: Time unit standards for temporal analysis
+    - Section 15: Centralized time unit definitions
+
+    Time Unit Semantics
+    -------------------
+    These units follow calendar-aware semantics for trend analysis:
+
+    HOUR : str
+        1 hour elapsed time (3600 seconds).
+        Use for high-frequency data (hourly observations).
+
+    DAY : str
+        1 calendar day (24 hours).
+        Use for daily aggregations and short-term trends.
+
+    CALENDAR_MONTH : str
+        1 calendar month (variable days: 28-31).
+        Accounts for month-length variation.
+        Use for monthly trends and seasonal analysis.
+
+    CALENDAR_YEAR : str
+        1 calendar year (365 or 366 days).
+        Accounts for leap years.
+        Use for annual trends and long-term analysis.
+
+    Examples
+    --------
+    >>> TimeUnit.DAY.value
+    'day'
+    >>> TimeUnit.CALENDAR_YEAR.value
+    'calendar_year'
+    """
+
+    HOUR = "hour"
+    DAY = "day"
+    CALENDAR_MONTH = "calendar_month"
+    CALENDAR_YEAR = "calendar_year"
+
+
 class UnitFamily(Enum):
     """Unit family classification for preventing invalid conversions.
 
@@ -433,7 +477,142 @@ def validate_units_schema(mapping: Dict[str, Union[Unit, str]]) -> Dict[str, Uni
     return normalized
 
 
+def compute_elapsed_time(
+    start: pd.Timestamp,
+    end: pd.Timestamp,
+    time_unit: TimeUnit,
+) -> float:
+    """Compute elapsed time between two timestamps in specified time units.
+
+    Handles calendar-aware semantics for months and years (variable lengths).
+    Constitution Section 15: Centralized time unit conversions.
+
+    Parameters
+    ----------
+    start : pd.Timestamp
+        Start timestamp (timezone-aware or naive).
+    end : pd.Timestamp
+        End timestamp (timezone-aware or naive).
+    time_unit : TimeUnit
+        Target time unit for elapsed time.
+
+    Returns
+    -------
+    float
+        Elapsed time in specified units.
+
+    Raises
+    ------
+    ValueError
+        If end < start or timestamps are incompatible.
+
+    Notes
+    -----
+    Calendar-aware semantics:
+    - HOUR: Precise hours (accounts for DST if timezone-aware)
+    - DAY: Calendar days (24-hour periods)
+    - CALENDAR_MONTH: Actual months between dates (handles variable month lengths)
+    - CALENDAR_YEAR: Actual years between dates (handles leap years)
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> start = pd.Timestamp("2024-01-01")
+    >>> end = pd.Timestamp("2024-12-31")
+    >>> compute_elapsed_time(start, end, TimeUnit.DAY)
+    365.0
+    >>> compute_elapsed_time(start, end, TimeUnit.CALENDAR_YEAR)
+    0.9972...  # Approximately 1 year (365/366 days)
+    """
+    if end < start:
+        raise ValueError(f"End timestamp ({end}) must be >= start timestamp ({start})")
+
+    if time_unit == TimeUnit.HOUR:
+        # Precise hours (handles DST if timezone-aware)
+        delta = end - start
+        return delta.total_seconds() / 3600.0
+
+    elif time_unit == TimeUnit.DAY:
+        # Calendar days (24-hour periods)
+        delta = end - start
+        return delta.total_seconds() / 86400.0
+
+    elif time_unit == TimeUnit.CALENDAR_MONTH:
+        # Count months accounting for variable month lengths
+        # Use pandas period arithmetic for calendar-aware logic
+        start_period = start.to_period("M")
+        end_period = end.to_period("M")
+
+        # Number of month boundaries crossed
+        months = (end_period.year - start_period.year) * 12 + (
+            end_period.month - start_period.month
+        )
+
+        # Add fractional month for partial month at end
+        # (days into end month / days in end month)
+        end_month_start = pd.Timestamp(year=end.year, month=end.month, day=1)
+        end_month_end = end_month_start + pd.offsets.MonthEnd(0)
+        days_in_end_month = end_month_end.day
+        days_into_end_month = end.day
+
+        return months + (days_into_end_month / days_in_end_month)
+
+    elif time_unit == TimeUnit.CALENDAR_YEAR:
+        # Count years accounting for leap years
+        # Use pandas period arithmetic for calendar-aware logic
+        start_period = start.to_period("Y")
+        end_period = end.to_period("Y")
+
+        # Number of year boundaries crossed
+        years = end_period.year - start_period.year
+
+        # Add fractional year for partial year at end
+        # (day of year / days in year)
+        year_start = pd.Timestamp(year=end.year, month=1, day=1)
+        year_end = pd.Timestamp(year=end.year, month=12, day=31)
+        days_in_year = (year_end - year_start).days + 1  # +1 to include Dec 31
+        day_of_year = end.dayofyear
+
+        return years + (day_of_year / days_in_year)
+
+    else:
+        raise ValueError(f"Unsupported time unit: {time_unit}")
+
+
+def format_time_unit(time_unit: TimeUnit) -> str:
+    """Get human-readable string for time unit.
+
+    Constitution Section 8: Consistent reporting format.
+
+    Parameters
+    ----------
+    time_unit : TimeUnit
+        Time unit enum member.
+
+    Returns
+    -------
+    str
+        Human-readable unit string for reporting.
+
+    Examples
+    --------
+    >>> format_time_unit(TimeUnit.HOUR)
+    'hour'
+    >>> format_time_unit(TimeUnit.CALENDAR_YEAR)
+    'year'
+    """
+    # Map to cleaner display names for reporting
+    display_names = {
+        TimeUnit.HOUR: "hour",
+        TimeUnit.DAY: "day",
+        TimeUnit.CALENDAR_MONTH: "month",
+        TimeUnit.CALENDAR_YEAR: "year",
+    }
+    return display_names.get(time_unit, time_unit.value)
+
+
 __all__ = [
+    "TimeUnit",
     "Unit",
     "UnitFamily",
     "can_convert",
@@ -441,4 +620,6 @@ __all__ = [
     "convert_values",
     "round_for_reporting",
     "validate_units_schema",
+    "compute_elapsed_time",
+    "format_time_unit",
 ]

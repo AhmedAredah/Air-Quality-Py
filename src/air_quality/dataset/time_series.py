@@ -256,3 +256,78 @@ class TimeSeriesDataset(BaseDataset):
             time_index_name=time_index_name,
             column_units=column_units,
         )
+
+    @classmethod
+    def from_polars(
+        cls,
+        df: pl.DataFrame | pl.LazyFrame,
+        metadata: Optional[Dict[str, Any]] = None,
+        mapping: Optional[Dict[str, str]] = None,
+        time_index_name: str = "datetime",
+        column_units: Optional[Dict[str, Union[Unit, str]]] = None,
+    ) -> TimeSeriesDataset:
+        """Construct time series dataset from Polars DataFrame or LazyFrame.
+
+        This is the most efficient construction method as it avoids any
+        data format conversions. Internally stores as LazyFrame.
+
+        Constitution References
+        -----------------------
+        - Section 11: Performance - columnar-first, no unnecessary conversions
+
+        Parameters
+        ----------
+        df : pl.DataFrame | pl.LazyFrame
+            Input data with canonical column names.
+        metadata : dict, optional
+            Additional metadata.
+        mapping : dict[str, str], optional
+            Canonical to original column mapping.
+        time_index_name : str, default='datetime'
+            Name of the time index column.
+        column_units : dict[str, Unit | str], optional
+            Column name to unit mapping. String values will be normalized
+            to Unit enum members.
+
+        Returns
+        -------
+        TimeSeriesDataset
+            Constructed dataset instance.
+
+        Raises
+        ------
+        SchemaError
+            If time index column is missing.
+        UnitError
+            If column_units contains invalid unit strings.
+        DataValidationError
+            If dataset is empty.
+
+        Examples
+        --------
+        >>> import polars as pl
+        >>> df = pl.DataFrame({
+        ...     'datetime': pl.datetime_range(
+        ...         start='2024-01-01', end='2024-01-10', interval='1d', eager=True
+        ...     ),
+        ...     'site_id': ['A'] * 10,
+        ...     'pollutant': ['PM2.5'] * 10,
+        ...     'conc': range(10)
+        ... })
+        >>> dataset = TimeSeriesDataset.from_polars(df)
+        >>> dataset.n_rows
+        10
+        """
+        # Convert to LazyFrame if needed (DataFrame -> LazyFrame is zero-copy)
+        if isinstance(df, pl.DataFrame):
+            lazy_df = df.lazy()
+        else:
+            lazy_df = df
+
+        return cls(
+            data=lazy_df,
+            metadata=metadata,
+            mapping=mapping,
+            time_index_name=time_index_name,
+            column_units=column_units,
+        )
