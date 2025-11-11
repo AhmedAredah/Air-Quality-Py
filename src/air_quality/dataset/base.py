@@ -238,3 +238,29 @@ class BaseDataset(ABC):
             Constructed dataset instance.
         """
         raise NotImplementedError("Subclasses must implement from_arrow")
+
+    @classmethod
+    @abstractmethod
+    def from_polars(
+        cls,
+        df: pl.DataFrame | pl.LazyFrame,
+        metadata: Optional[Dict[str, Any]] = None,
+        mapping: Optional[Dict[str, str]] = None,
+    ) -> BaseDataset:
+        """Construct dataset from Polars DataFrame or LazyFrame.
+
+        Parameters
+        ----------
+        df : pl.DataFrame | pl.LazyFrame
+            Input data with canonical column names.
+        metadata : dict, optional
+            Additional metadata.
+        mapping : dict[str, str], optional
+            Canonical to original column mapping.
+
+        Returns
+        -------
+        BaseDataset
+            Constructed dataset instance.
+        """
+        raise NotImplementedError("Subclasses must implement from_polars")
